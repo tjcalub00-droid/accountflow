@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "AccountFlow"
+description = "An accounting workspace for managing invoices, expenses, receipts, payroll, employees, vouchers, and financial reports."
+version = "1.0.0"
+id = "artifacts/accountflow"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22900
+
+[services.development]
+run = "pnpm --filter @workspace/accountflow run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/accountflow", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/accountflow/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22900"
+BASE_PATH = "/"
