@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --primary: #1a56db;
+  --primary-foreground: #ffffff;
+  --secondary: #e2e8f0;
+  --secondary-foreground: #475569;
+  --accent: #0e9f6e;
+  --accent-foreground: #ffffff;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #1a56db;
+  --radius: 0.75rem;
+  --font-sans: var(--font-plus-jakarta-sans), sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), monospace;
+  --warning: #e3a008;
+  --warning-foreground: #ffffff;
+  --danger: #e02424;
+  --danger-foreground: #ffffff;
+  --success: #0e9f6e;
+  --success-foreground: #ffffff;
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  h1, h2, h3, h4, h5, h6, p {
+    margin: 0;
+  }
+}
+
+@layer utilities {
+  .font-mono-nums {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .sidebar-transition {
+    transition: width 300ms ease, transform 300ms ease;
+  }
+  .content-transition {
+    transition: margin-left 300ms ease;
+  }
+  .fade-in {
+    animation: fadeIn 200ms ease forwards;
+  }
+  .slide-up {
+    animation: slideUp 200ms ease forwards;
+  }
+  .scale-in {
+    animation: scaleIn 150ms ease forwards;
+  }
+  .pulse-highlight {
+    animation: pulseHighlight 600ms ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes pulseHighlight {
+    0% { background-color: transparent; }
+    30% { background-color: #fef9c3; }
+    100% { background-color: transparent; }
+  }
+  .text-hero-xl {
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 2px;
+  }
+}
+
+@media print {
+  /* Hide navigation and non-content elements */
+  .print\:hidden,
+  [class*="Sidebar"],
+  nav,
+  aside {
+    display: none !important;
+  }
+
+  /* Reset layout for print */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  main {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Ensure cards and tables print cleanly */
+  .bg-card,
+  .bg-muted {
+    background: white !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  /* Page breaks */
+  table {
+    page-break-inside: auto;
+  }
+  tr {
+    page-break-inside: avoid;
+  }
+
+  /* Print header */
+  @page {
+    margin: 1.5cm;
+  }
+}
