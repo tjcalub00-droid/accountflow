@@ -6,12 +6,26 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import Modal from '@/components/ui/Modal';
 import CreateInvoiceForm from './CreateInvoiceForm';
 import InvoicePreviewModal from './InvoicePreviewModal';
-import { buildInvoiceDocumentHtml, type Invoice } from './invoiceDocument';
+import {
+  buildInvoiceDocumentHtml,
+  invoiceStatusLabels,
+  type EditableInvoiceStatus,
+  type Invoice,
+} from './invoiceDocument';
 import { notifyInvoicesChanged } from './invoiceEvents';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-const statusFilters = ['All', 'Draft', 'Sent', 'Paid', 'Partial', 'Void'];
+const statusFilters = ['All', 'Draft', 'Open', 'Payment Received', 'Overdue', 'Partial', 'Close', 'Void'];
+const statusFilterValues: Record<string, Invoice['status']> = {
+  Draft: 'draft',
+  Open: 'sent',
+  'Payment Received': 'paid',
+  Overdue: 'overdue',
+  Partial: 'partial',
+  Close: 'closed',
+  Void: 'void',
+};
 type SortKey = 'number' | 'customer' | 'issueDate' | 'dueDate' | 'total' | 'status';
 
 function isSchemaError(error: any): boolean {
@@ -72,7 +86,7 @@ export default function InvoicesTableSection() {
           amount: Number(row.amount),
           tax: Number(row.tax),
           total: Number(row.total),
-          status: row.status === 'overdue' ? 'sent' : row.status,
+          status: row.status,
           items: Array.isArray(row.items)
             ? row.items.map((item: any) => ({
                 description: String(item.description ?? ''),
@@ -121,6 +135,36 @@ export default function InvoicesTableSection() {
     }
   };
 
+  const handleStatusChange = async (
+    invoice: Invoice,
+    status: EditableInvoiceStatus
+  ): Promise<boolean> => {
+    if (!canEdit) return false;
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status } as never)
+        .eq('id', invoice.id);
+      if (error) {
+        toast.error(error.message || 'Failed to update invoice status');
+        return false;
+      }
+
+      setInvoices((current) =>
+        current.map((item) => item.id === invoice.id ? { ...item, status } : item)
+      );
+      setPreviewInvoice((current) =>
+        current?.id === invoice.id ? { ...current, status } : current
+      );
+      notifyInvoicesChanged();
+      toast.success(`${invoice.number} status changed to ${invoiceStatusLabels[status]}`);
+      return true;
+    } catch {
+      toast.error('Failed to update invoice status');
+      return false;
+    }
+  };
+
   const handlePrint = (inv: Invoice) => {
     const printWindow = window.open('', '_blank', 'width=900,height=720');
     if (!printWindow) {
@@ -150,7 +194,7 @@ export default function InvoicesTableSection() {
       );
     }
     if (statusFilter !== 'All') {
-      list = list.filter((inv) => inv.status === statusFilter.toLowerCase());
+      list = list.filter((inv) => inv.status === statusFilterValues[statusFilter]);
     }
     list.sort((a, b) => {
       let va: string | number = a[sortKey] as string | number;
@@ -346,7 +390,9 @@ export default function InvoicesTableSection() {
                   <td className="px-4 py-3 text-right font-mono text-sm text-foreground">₱{inv.amount.toLocaleString()}</td>
                   <td className="px-4 py-3 text-right font-mono text-sm text-muted-foreground">₱{inv.tax.toLocaleString()}</td>
                   <td className="px-4 py-3 text-right font-mono text-sm font-bold text-foreground">₱{inv.total.toLocaleString()}</td>
-                  <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
+                   <td className="px-4 py-3">
+                     <StatusBadge status={inv.status} label={invoiceStatusLabels[inv.status]} />
+                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button title="Preview invoice" aria-label={`Preview invoice ${inv.number}`} onClick={() => openInvoicePreview(inv)} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
@@ -393,8 +439,10 @@ export default function InvoicesTableSection() {
       <InvoicePreviewModal
         invoice={previewInvoice}
         open={previewOpen}
+        canEdit={canEdit}
         onClose={() => setPreviewOpen(false)}
         onPrint={handlePrint}
+        onStatusChange={handleStatusChange}
       />
     </div>
   );

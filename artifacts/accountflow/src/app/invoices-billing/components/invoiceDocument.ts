@@ -4,6 +4,41 @@ export interface InvoiceLineItem {
   rate: number;
 }
 
+export type InvoiceStatus =
+  | 'paid'
+  | 'sent'
+  | 'draft'
+  | 'partial'
+  | 'overdue'
+  | 'void'
+  | 'closed';
+
+export type EditableInvoiceStatus = Extract<
+  InvoiceStatus,
+  'paid' | 'sent' | 'overdue' | 'partial' | 'closed'
+>;
+
+export const invoiceStatusLabels: Record<InvoiceStatus, string> = {
+  paid: 'PAYMENT RECEIVED',
+  sent: 'OPEN',
+  overdue: 'OVERDUE',
+  partial: 'PARTIAL',
+  closed: 'CLOSE',
+  draft: 'DRAFT',
+  void: 'VOID',
+};
+
+export const editableInvoiceStatuses: Array<{
+  value: EditableInvoiceStatus;
+  label: string;
+}> = [
+  { value: 'paid', label: invoiceStatusLabels.paid },
+  { value: 'sent', label: invoiceStatusLabels.sent },
+  { value: 'overdue', label: invoiceStatusLabels.overdue },
+  { value: 'partial', label: invoiceStatusLabels.partial },
+  { value: 'closed', label: invoiceStatusLabels.closed },
+];
+
 export interface Invoice {
   id: string;
   number: string;
@@ -14,7 +49,7 @@ export interface Invoice {
   amount: number;
   tax: number;
   total: number;
-  status: 'paid' | 'sent' | 'draft' | 'partial' | 'overdue' | 'void';
+  status: InvoiceStatus;
   items: InvoiceLineItem[];
   notes: string;
 }
@@ -63,7 +98,7 @@ export function buildInvoiceDocumentHtml(invoice: Invoice): string {
           .label { color: #667085; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
           .value { margin-top: 5px; font-size: 14px; font-weight: 600; }
           .muted { margin-top: 3px; color: #667085; }
-          .status { display: inline-block; margin-top: 10px; padding: 3px 9px; border-radius: 999px; background: #f1f4f8; color: #344054; font-size: 11px; text-transform: capitalize; }
+          .status { display: inline-block; margin-top: 10px; padding: 3px 9px; border-radius: 999px; background: #f1f4f8; color: #344054; font-size: 11px; font-weight: 700; letter-spacing: .04em; }
           table { width: 100%; border-collapse: collapse; margin-top: 12px; }
           th, td { padding: 13px 10px; border-bottom: 1px solid #e6eaf0; text-align: left; }
           th { color: #667085; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
@@ -83,7 +118,7 @@ export function buildInvoiceDocumentHtml(invoice: Invoice): string {
         <main class="sheet">
           <header class="top">
             <div><div class="brand">OdinThor</div><p class="eyebrow">Your Eyes to your Business</p></div>
-            <div><p class="eyebrow">Invoice</p><h1>${escapeHtml(invoice.number)}</h1><span class="status">${escapeHtml(invoice.status)}</span></div>
+            <div><p class="eyebrow">Invoice</p><h1>${escapeHtml(invoice.number)}</h1><span class="status">${escapeHtml(invoiceStatusLabels[invoice.status])}</span></div>
           </header>
           <section class="meta">
             <div><div class="label">Bill to</div><div class="value">${escapeHtml(invoice.customer)}</div><div class="muted">${escapeHtml(invoice.email || '—')}</div></div>
