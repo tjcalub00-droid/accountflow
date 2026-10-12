@@ -4,32 +4,8 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, UserCheck, UserX } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import StatusBadge from '@/components/ui/StatusBadge';
+import { getMonthlyEmployeePay, mapEmployeeRecord, type Employee } from '@/lib/employee-pay';
 import EmployeeFormModal from './EmployeeFormModal';
-
-export interface Employee {
-  id: string;
-  fullName: string;
-  role: string;
-  monthlySalary: number;
-  sssRate: number;
-  pagibigRate: number;
-  hdmfRate: number;
-  isActive: boolean;
-}
-
-function toEmployee(row: any): Employee {
-  return {
-    id: row.id,
-    fullName: row.full_name,
-    role: row.role,
-    monthlySalary: Number(row.monthly_salary),
-    sssRate: Number(row.sss_rate),
-    pagibigRate: Number(row.pagibig_rate),
-    hdmfRate: Number(row.hdmf_rate),
-    isActive: row.is_active,
-  };
-}
 
 export default function EmployeeManagementContent() {
   const { getEffectiveOwnerId } = useAuth();
@@ -55,7 +31,7 @@ export default function EmployeeManagementContent() {
         toast.error('Failed to load employees');
         return;
       }
-      setEmployees((data || []).map(toEmployee));
+      setEmployees((data || []).map((row) => mapEmployeeRecord(row)));
     } finally {
       setLoading(false);
     }
@@ -109,7 +85,7 @@ export default function EmployeeManagementContent() {
   const activeCount = employees.filter((e) => e.isActive).length;
   const totalPayroll = employees
     .filter((e) => e.isActive)
-    .reduce((s, e) => s + e.monthlySalary, 0);
+    .reduce((sum, employee) => sum + getMonthlyEmployeePay(employee).gross, 0);
 
   return (
     <div className="space-y-5">
@@ -143,7 +119,7 @@ export default function EmployeeManagementContent() {
         </div>
 
         <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm" style={{ minWidth: '900px' }}>
+          <table className="w-full text-sm" style={{ minWidth: '800px' }}>
             <thead>
               <tr className="border-b border-border bg-muted/30">
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-widest text-muted-foreground">Employee</th>
@@ -152,14 +128,13 @@ export default function EmployeeManagementContent() {
                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pagibig</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-widest text-muted-foreground">HDMF</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-widest text-muted-foreground">Net (Monthly)</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-widest text-muted-foreground">Status</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-widest text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-16 text-center">
+                  <td colSpan={7} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
                       <p className="text-sm text-muted-foreground">Loading employees...</p>
@@ -168,7 +143,7 @@ export default function EmployeeManagementContent() {
                 </tr>
               ) : employees.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-16 text-center">
+                  <td colSpan={7} className="px-4 py-16 text-center">
                     <p className="text-sm text-muted-foreground">No employees registered yet.</p>
                     <button
                       onClick={handleAdd}
@@ -180,8 +155,7 @@ export default function EmployeeManagementContent() {
                 </tr>
               ) : (
                 employees.map((emp) => {
-                  const totalDeductions = emp.sssRate + emp.pagibigRate + emp.hdmfRate;
-                  const netMonthly = emp.monthlySalary - totalDeductions;
+                  const pay = getMonthlyEmployeePay(emp);
                   return (
                     <tr key={emp.id} className="border-b border-border hover:bg-muted/40 transition-colors group">
                       <td className="px-4 py-3">
@@ -189,22 +163,19 @@ export default function EmployeeManagementContent() {
                         <p className="text-xs text-muted-foreground">{emp.role}</p>
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-sm text-foreground">
-                        ₱{emp.monthlySalary.toLocaleString()}
+                        ₱{pay.gross.toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-sm text-danger/80">
-                        {emp.sssRate > 0 ? `(₱${emp.sssRate.toLocaleString()})` : '—'}
+                        {pay.sss > 0 ? `(₱${pay.sss.toLocaleString()})` : '—'}
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-sm text-danger/80">
-                        {emp.pagibigRate > 0 ? `(₱${emp.pagibigRate.toLocaleString()})` : '—'}
+                        {pay.pagibig > 0 ? `(₱${pay.pagibig.toLocaleString()})` : '—'}
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-sm text-danger/80">
-                        {emp.hdmfRate > 0 ? `(₱${emp.hdmfRate.toLocaleString()})` : '—'}
+                        {pay.hdmf > 0 ? `(₱${pay.hdmf.toLocaleString()})` : '—'}
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-sm font-bold text-success">
-                        ₱{netMonthly.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={emp.isActive ? 'paid' : 'pending'} />
+                        ₱{pay.net.toLocaleString()}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Employee } from './EmployeeManagementContent';
+import type { Employee } from '@/lib/employee-pay';
 
 interface Props {
   open: boolean;

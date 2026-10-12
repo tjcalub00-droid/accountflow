@@ -6,6 +6,7 @@ import { Loader2, CheckCircle2 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getBimonthlyEmployeePay, getMonthlyEmployeePay, mapEmployeeRecord } from '@/lib/employee-pay';
 
 interface Props {
   open: boolean;
@@ -23,11 +24,11 @@ interface EmployeeRow {
   id: string;
   name: string;
   role: string;
-  monthlyGross: number;
-  sssRate: number;
-  pagibigRate: number;
-  hdmfRate: number;
-  monthlyNet: number;
+  halfGross: number;
+  halfNet: number;
+  halfSss: number;
+  halfPagibig: number;
+  halfHdmf: number;
   included: boolean;
 }
 
@@ -100,20 +101,18 @@ export default function RunPayrollModal({ open, onClose }: Props) {
       }
       setEmployees(
         (data || []).map((row: any) => {
-          const sss = Number(row.sss_rate);
-          const pagibig = Number(row.pagibig_rate);
-          const hdmf = Number(row.hdmf_rate);
-          const monthlyGross = Number(row.monthly_salary);
-          const monthlyNet = monthlyGross - sss - pagibig - hdmf;
+          const employee = mapEmployeeRecord(row);
+          const monthlyPay = getMonthlyEmployeePay(employee);
+          const pay = getBimonthlyEmployeePay(employee);
           return {
-            id: row.id,
-            name: row.full_name,
-            role: row.role,
-            monthlyGross,
-            sssRate: sss,
-            pagibigRate: pagibig,
-            hdmfRate: hdmf,
-            monthlyNet,
+            id: employee.id,
+            name: employee.fullName,
+            role: employee.role,
+            halfGross: pay.gross,
+            halfNet: pay.net,
+            halfSss: pay.sss,
+            halfPagibig: pay.pagibig,
+            halfHdmf: pay.hdmf,
             included: true,
           };
         })
@@ -135,15 +134,9 @@ export default function RunPayrollModal({ open, onClose }: Props) {
 
   const { start: periodStart, end: periodEnd } = getPeriodDates(periodMonth, periodType);
 
-  const halfGross = (monthly: number) => Math.round(monthly / 2);
-  const halfNet = (monthly: number) => Math.round(monthly / 2);
-  const halfSss = (rate: number) => Math.round(rate / 2);
-  const halfPagibig = (rate: number) => Math.round(rate / 2);
-  const halfHdmf = (rate: number) => Math.round(rate / 2);
-
   const included = employees.filter((e) => e.included);
-  const totalGross = included.reduce((s, e) => s + halfGross(e.monthlyGross), 0);
-  const totalNet = included.reduce((s, e) => s + halfNet(e.monthlyNet), 0);
+  const totalGross = included.reduce((sum, employee) => sum + employee.halfGross, 0);
+  const totalNet = included.reduce((sum, employee) => sum + employee.halfNet, 0);
 
   const periodLabel =
     periodType === 'first-half'
@@ -172,12 +165,12 @@ export default function RunPayrollModal({ open, onClose }: Props) {
         pay_date: data.payDate,
         employee_name: emp.name,
         employee_role: emp.role,
-        gross_pay: halfGross(emp.monthlyGross),
-        federal_tax: halfSss(emp.sssRate),
-        state_tax: halfPagibig(emp.pagibigRate),
-        fica: halfHdmf(emp.hdmfRate),
+        gross_pay: emp.halfGross,
+        federal_tax: emp.halfSss,
+        state_tax: emp.halfPagibig,
+        fica: emp.halfHdmf,
         health_ins: 0,
-        net_pay: halfNet(emp.monthlyNet),
+        net_pay: emp.halfNet,
         status: 'paid' as const,
       }));
 
@@ -298,10 +291,10 @@ export default function RunPayrollModal({ open, onClose }: Props) {
                         <p className="text-xs text-muted-foreground">{emp.role}</p>
                       </td>
                       <td className="px-4 py-2.5 text-right font-mono text-sm text-foreground">
-                        ₱{halfGross(emp.monthlyGross).toLocaleString()}
+                        ₱{emp.halfGross.toLocaleString()}
                       </td>
                       <td className="px-4 py-2.5 text-right font-mono text-sm font-semibold text-success">
-                        ₱{halfNet(emp.monthlyNet).toLocaleString()}
+                        ₱{emp.halfNet.toLocaleString()}
                       </td>
                       <td className="px-4 py-2.5 text-center">
                         <input
