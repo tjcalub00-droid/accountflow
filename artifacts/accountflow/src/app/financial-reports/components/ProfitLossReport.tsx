@@ -1,11 +1,6 @@
 'use client';
 import React from 'react';
-import dynamic from 'next/dynamic';
-
-const PLChart = dynamic(() => import('./charts/PLChart'), {
-  ssr: false,
-  loading: () => <div className="animate-pulse bg-muted rounded-xl h-56 w-full" />,
-});
+import PLChart from './charts/PLChart';
 
 interface Props {
   period: string;

@@ -1,16 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 
-import Image from 'next/image';
 import { Eye, EyeOff, LogIn, UserPlus, AlertCircle } from 'lucide-react';
 
 type Mode = 'login' | 'register';
 
 export default function LoginPage() {
-  const router = useRouter();
+  const [, navigate] = useLocation();
   const { signIn, signUp } = useAuth();
 
   const [mode, setMode] = useState<Mode>('login');
@@ -36,10 +35,10 @@ export default function LoginPage() {
     try {
       if (mode === 'login') {
         await signIn(email, password);
-        router.replace('/');
+        navigate('/', { replace: true });
       } else {
         await signUp(email, password, { fullName, role: 'owner' });
-        router.replace('/');
+        navigate('/', { replace: true });
       }
     } catch (err: any) {
       setError(err?.message || 'Authentication failed. Please try again.');
@@ -55,7 +54,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-1 mb-2">
             <span className="text-2xl font-bold tracking-tight text-foreground">Odin</span>
-            <Image
+            <img
               src="/assets/images/istockphoto-1271371970-612x612-1789378855208.jpg"
               alt="Odinthor hammer logo"
               width={36}

@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { UserPlus, Trash2, Shield, AlertCircle, Users } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useLocation } from 'wouter';
 
 interface SubUser {
   id: string;
@@ -28,7 +28,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
 
 export default function UserManagementPage() {
   const { isOwner, user, getEffectiveOwnerId } = useAuth();
-  const router = useRouter();
+  const [, navigate] = useLocation();
   const supabase = createClient();
 
   const [subUsers, setSubUsers] = useState<SubUser[]>([]);
@@ -43,7 +43,7 @@ export default function UserManagementPage() {
 
   useEffect(() => {
     if (!isOwner()) {
-      router.replace('/');
+      navigate('/', { replace: true });
       return;
     }
     fetchSubUsers();

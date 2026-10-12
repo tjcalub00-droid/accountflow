@@ -1,11 +1,6 @@
 'use client';
 import React from 'react';
-import dynamic from 'next/dynamic';
-
-const CashFlowChart = dynamic(() => import('./charts/CashFlowChart'), {
-  ssr: false,
-  loading: () => <div className="animate-pulse bg-muted rounded-xl h-56 w-full" />,
-});
+import CashFlowChart from './charts/CashFlowChart';
 
 interface Props { period: string; compare: boolean; }
 

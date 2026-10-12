@@ -1,9 +1,7 @@
 'use client';
 import React, { useState } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { Link, useLocation } from 'wouter';
 
-import Image from 'next/image';
 import {
   LayoutDashboard,
   FileText,
@@ -60,8 +58,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeave, onNavClick }: SidebarProps) {
-  const pathname = usePathname();
-  const router = useRouter();
+  const [pathname, navigate] = useLocation();
   const { profile, signOut, isOwner } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
 
@@ -69,7 +66,7 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
     setSigningOut(true);
     try {
       await signOut();
-      router.replace('/login');
+      navigate('/login', { replace: true });
     } catch {
       setSigningOut(false);
     }
@@ -92,7 +89,7 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
       {/* Logo */}
       <div className={`flex items-center border-b border-border ${collapsed ? 'justify-center px-0 py-4' : 'px-4 py-4 gap-2'}`}>
         {collapsed ? (
-          <Image
+          <img
             src="/assets/images/istockphoto-1271371970-612x612-1789378855208.jpg"
             alt="Odinthor hammer logo"
             width={32}
@@ -102,7 +99,7 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
         ) : (
           <div className="flex items-center gap-1">
             <span className="font-bold text-lg tracking-tight text-foreground">Odin</span>
-            <Image
+            <img
               src="/assets/images/istockphoto-1271371970-612x612-1789378855208.jpg"
               alt="Odinthor hammer logo"
               width={28}

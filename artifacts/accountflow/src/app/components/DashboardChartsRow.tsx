@@ -1,16 +1,7 @@
 'use client';
 import React from 'react';
-import dynamic from 'next/dynamic';
-
-const RevenueVsExpensesChart = dynamic(
-  () => import('./charts/RevenueVsExpensesChart'),
-  { ssr: false, loading: () => <div className="animate-pulse bg-muted rounded-xl h-72 w-full" /> }
-);
-
-const ExpenseCategoryChart = dynamic(
-  () => import('./charts/ExpenseCategoryChart'),
-  { ssr: false, loading: () => <div className="animate-pulse bg-muted rounded-xl h-72 w-full" /> }
-);
+import RevenueVsExpensesChart from './charts/RevenueVsExpensesChart';
+import ExpenseCategoryChart from './charts/ExpenseCategoryChart';
 
 export default function DashboardChartsRow() {
   return (

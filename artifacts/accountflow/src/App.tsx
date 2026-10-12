@@ -1,40 +1,64 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
-import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import NotFound from '@/pages/not-found';
 import {
   Route,
   Switch,
   useLocation,
   Router as WouterRouter,
 } from 'wouter';
+import { useAuth } from '@/contexts/AuthContext';
+import DashboardPage from '@/app/page';
+import LoginPage from '@/app/login/page';
+import CompanySettingsPage from '@/app/company-settings/page';
+import EmployeeManagementPage from '@/app/employee-management/page';
+import ExpensesPage from '@/app/expenses/page';
+import FinancialReportsPage from '@/app/financial-reports/page';
+import InvoicesBillingPage from '@/app/invoices-billing/page';
+import PayrollTaxPage from '@/app/payroll-tax/page';
+import ReceiptStoragePage from '@/app/receipt-storage/page';
+import UserManagementPage from '@/app/user-management/page';
+import VoucherManagementPage from '@/app/voucher-management/page';
+import AuthCallbackPage from '@/app/auth/callback/page';
+import NotFound from '@/app/not-found';
 
 const queryClient = new QueryClient();
 
-function Home() {
-  return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Replit Agent is building...
-        </h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Your app will appear here once it's ready.
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function Router() {
+  const [location, navigate] = useLocation();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !user && location !== '/login' && location !== '/auth/callback') {
+      navigate('/login', { replace: true });
+    } else if (!loading && user && location === '/login') {
+      navigate('/', { replace: true });
+    }
+  }, [loading, user, location, navigate]);
+  if (
+    loading ||
+    (!user && location !== '/login' && location !== '/auth/callback') ||
+    (user && location === '/login')
+  ) return <div className="min-h-screen bg-background" />;
+
   return (
     // Keep a shared shell (sidebar, navbar) outside the boundary so it
     // survives a page crash.
     <RoutedErrorBoundary>
       <Switch>
-        <Route path="/" component={Home} />
+        <Route path="/" component={DashboardPage} />
+        <Route path="/login" component={LoginPage} />
+        <Route path="/auth/callback" component={AuthCallbackPage} />
+        <Route path="/company-settings" component={CompanySettingsPage} />
+        <Route path="/employee-management" component={EmployeeManagementPage} />
+        <Route path="/expenses" component={ExpensesPage} />
+        <Route path="/financial-reports" component={FinancialReportsPage} />
+        <Route path="/invoices-billing" component={InvoicesBillingPage} />
+        <Route path="/payroll-tax" component={PayrollTaxPage} />
+        <Route path="/receipt-storage" component={ReceiptStoragePage} />
+        <Route path="/user-management" component={UserManagementPage} />
+        <Route path="/voucher-management" component={VoucherManagementPage} />
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>
@@ -53,7 +77,6 @@ function App() {
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <Router />
         </WouterRouter>
-        <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
   );
