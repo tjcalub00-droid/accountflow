@@ -1,0 +1,2 @@
+ALTER TABLE public.invoices
+  ADD COLUMN IF NOT EXISTS items JSONB NOT NULL DEFAULT '[]'::jsonb;

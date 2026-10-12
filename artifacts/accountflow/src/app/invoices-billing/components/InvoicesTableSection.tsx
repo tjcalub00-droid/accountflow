@@ -1,27 +1,14 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Search, Plus, ChevronUp, ChevronDown, Send, CheckCircle, Eye, Trash2, Download, FileText } from 'lucide-react';
+import { Search, Plus, ChevronUp, ChevronDown, Send, CheckCircle, Eye, Trash2, Download, FileText, Printer } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Modal from '@/components/ui/Modal';
 import CreateInvoiceForm from './CreateInvoiceForm';
+import InvoicePreviewModal from './InvoicePreviewModal';
+import { buildInvoiceDocumentHtml, type Invoice } from './invoiceDocument';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
-type InvoiceStatus = 'paid' | 'sent' | 'draft' | 'partial' | 'void';
-
-interface Invoice {
-  id: string;
-  number: string;
-  customer: string;
-  email: string;
-  issueDate: string;
-  dueDate: string;
-  amount: number;
-  tax: number;
-  total: number;
-  status: InvoiceStatus;
-}
 
 const statusFilters = ['All', 'Draft', 'Sent', 'Paid', 'Partial', 'Void'];
 type SortKey = 'number' | 'customer' | 'issueDate' | 'dueDate' | 'total' | 'status';
@@ -51,6 +38,8 @@ export default function InvoicesTableSection() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [createOpen, setCreateOpen] = useState(false);
+  const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [page, setPage] = useState(1);
   const perPage = 10;
 
@@ -82,7 +71,15 @@ export default function InvoicesTableSection() {
           amount: Number(row.amount),
           tax: Number(row.tax),
           total: Number(row.total),
-          status: row.status === 'overdue' ? 'sent' : (row.status as InvoiceStatus),
+          status: row.status === 'overdue' ? 'sent' : row.status,
+          items: Array.isArray(row.items)
+            ? row.items.map((item: any) => ({
+                description: String(item.description ?? ''),
+                quantity: Number(item.quantity) || 0,
+                rate: Number(item.rate) || 0,
+              }))
+            : [],
+          notes: row.notes ?? '',
         }))
       );
     } catch (err: any) {
@@ -119,6 +116,23 @@ export default function InvoicesTableSection() {
     } catch {
       toast.error('Error updating invoices');
     }
+  };
+
+  const handlePrint = (inv: Invoice) => {
+    const printWindow = window.open('', '_blank', 'width=900,height=720');
+    if (!printWindow) {
+      toast.error('Allow pop-ups to print this invoice');
+      return;
+    }
+
+    printWindow.opener = null;
+    printWindow.document.write(buildInvoiceDocumentHtml(inv));
+    printWindow.document.close();
+    printWindow.addEventListener('afterprint', () => printWindow.close(), { once: true });
+    window.setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+    }, 300);
   };
 
   const filtered = useMemo(() => {
@@ -165,6 +179,17 @@ export default function InvoicesTableSection() {
   const toggleAll = () => {
     if (selectedRows.size === paged.length) setSelectedRows(new Set());
     else setSelectedRows(new Set(paged.map((r) => r.id)));
+  };
+
+  const openInvoicePreview = (invoice: Invoice) => {
+    setPreviewInvoice(invoice);
+    setPreviewOpen(true);
+  };
+
+  const handleInvoiceCreated = (invoice: Invoice) => {
+    setCreateOpen(false);
+    setInvoices((current) => [invoice, ...current.filter((item) => item.id !== invoice.id)]);
+    openInvoicePreview(invoice);
   };
 
   const SortIcon = ({ col }: { col: SortKey }) =>
@@ -320,8 +345,16 @@ export default function InvoicesTableSection() {
                   <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button title="View" onClick={() => toast.info(`Viewing ${inv.number}`)} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                      <button title="Preview invoice" aria-label={`Preview invoice ${inv.number}`} onClick={() => openInvoicePreview(inv)} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                         <Eye size={13} />
+                      </button>
+                      <button
+                        title={`Print invoice ${inv.number}`}
+                        aria-label={`Print invoice ${inv.number}`}
+                        onClick={() => handlePrint(inv)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      >
+                        <Printer size={13} />
                       </button>
                       {canEdit && (
                         <button title="Delete" onClick={() => handleDelete(inv.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-danger/10 hover:text-danger transition-colors">
@@ -351,8 +384,14 @@ export default function InvoicesTableSection() {
       )}
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Create Invoice">
-        <CreateInvoiceForm onClose={() => { setCreateOpen(false); fetchInvoices(); }} />
+        <CreateInvoiceForm onClose={() => setCreateOpen(false)} onCreated={handleInvoiceCreated} />
       </Modal>
+      <InvoicePreviewModal
+        invoice={previewInvoice}
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        onPrint={handlePrint}
+      />
     </div>
   );
 }

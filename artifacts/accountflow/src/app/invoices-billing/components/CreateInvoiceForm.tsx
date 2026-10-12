@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import type { Invoice } from './invoiceDocument';
 
 interface LineItem {
   description: string;
@@ -23,9 +24,10 @@ interface InvoiceFormData {
 
 interface Props {
   onClose: () => void;
+  onCreated: (invoice: Invoice) => void;
 }
 
-export default function CreateInvoiceForm({ onClose }: Props) {
+export default function CreateInvoiceForm({ onClose, onCreated }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user, getEffectiveOwnerId } = useAuth();
   const supabase = createClient();
@@ -50,15 +52,24 @@ export default function CreateInvoiceForm({ onClose }: Props) {
   const total = subtotal + tax;
 
   const onSubmit = async (data: InvoiceFormData) => {
+    const lineItems = data.items.map((item) => ({
+      description: item.description.trim(),
+      quantity: Number(item.quantity),
+      rate: Number(item.rate),
+    }));
+    const invoiceSubtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.rate, 0);
+    const invoiceTax = invoiceSubtotal * 0.1;
+    const invoiceTotal = invoiceSubtotal + invoiceTax;
+
     // Numeric constraint: at least one line item must have amount > 0
-    const hasValidItem = data.items.some(
+    const hasValidItem = lineItems.some(
       (item) => item.description.trim() !== '' && item.quantity >= 1 && item.rate >= 0
     );
     if (!hasValidItem) {
       toast.error('Add at least one line item with a description and valid quantity.');
       return;
     }
-    if (subtotal <= 0) {
+    if (invoiceSubtotal <= 0) {
       toast.error('Invoice total must be greater than ₱0.00.');
       return;
     }
@@ -90,24 +101,43 @@ export default function CreateInvoiceForm({ onClose }: Props) {
         .eq('owner_id', ownerId);
       const invoiceNumber = `INV-${String((count || 0) + 1).padStart(4, '0')}`;
 
-      const { error } = await supabase.from('invoices').insert({
+      const { data: created, error } = await supabase.from('invoices').insert({
         user_id: user.id,
         owner_id: ownerId,
         invoice_number: invoiceNumber,
         customer: data.customer.trim(),
-        customer_email: data.email,
+        customer_email: data.email.trim(),
         issue_date: data.issueDate,
         due_date: data.dueDate,
-        amount: subtotal,
-        tax: tax,
-        total: total,
+        amount: invoiceSubtotal,
+        tax: invoiceTax,
+        total: invoiceTotal,
         status: 'draft',
         notes: data.notes || null,
-      });
+        items: lineItems,
+      }).select('id').single();
 
       if (error) { toast.error('Failed to create invoice'); return; }
+      const createdId = (created as unknown as { id?: string } | null)?.id;
+      if (!createdId) {
+        toast.error('Invoice saved, but its preview could not be opened.');
+        return;
+      }
       toast.success(`Invoice ${invoiceNumber} created for ${data.customer}`);
-      onClose();
+      onCreated({
+        id: createdId,
+        number: invoiceNumber,
+        customer: data.customer.trim(),
+        email: data.email.trim(),
+        issueDate: data.issueDate,
+        dueDate: data.dueDate,
+        amount: invoiceSubtotal,
+        tax: invoiceTax,
+        total: invoiceTotal,
+        status: 'draft',
+        items: lineItems,
+        notes: data.notes || '',
+      });
     } catch (err: any) {
       toast.error(err?.message || 'Error creating invoice');
     } finally {
