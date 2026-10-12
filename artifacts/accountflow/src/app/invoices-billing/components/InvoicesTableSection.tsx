@@ -7,6 +7,7 @@ import Modal from '@/components/ui/Modal';
 import CreateInvoiceForm from './CreateInvoiceForm';
 import InvoicePreviewModal from './InvoicePreviewModal';
 import { buildInvoiceDocumentHtml, type Invoice } from './invoiceDocument';
+import { notifyInvoicesChanged } from './invoiceEvents';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -99,6 +100,7 @@ export default function InvoicesTableSection() {
       const { error } = await supabase.from('invoices').delete().eq('id', id);
       if (error) { toast.error('Failed to delete invoice'); return; }
       toast.success('Invoice deleted');
+      notifyInvoicesChanged();
       fetchInvoices();
     } catch {
       toast.error('Error deleting invoice');
@@ -111,6 +113,7 @@ export default function InvoicesTableSection() {
       const { error } = await supabase.from('invoices').update({ status: 'paid' }).in('id', ids);
       if (error) { toast.error('Failed to update invoices'); return; }
       toast.success(`${ids.length} invoice(s) marked as paid`);
+      notifyInvoicesChanged();
       setSelectedRows(new Set());
       fetchInvoices();
     } catch {
@@ -189,6 +192,7 @@ export default function InvoicesTableSection() {
   const handleInvoiceCreated = (invoice: Invoice) => {
     setCreateOpen(false);
     setInvoices((current) => [invoice, ...current.filter((item) => item.id !== invoice.id)]);
+    notifyInvoicesChanged();
     openInvoicePreview(invoice);
   };
 
