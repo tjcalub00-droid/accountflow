@@ -1,10 +1,10 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Search, Plus, ChevronUp, ChevronDown, Paperclip, Tag, Trash2, Edit2, Download, Receipt } from 'lucide-react';
+import { Search, Plus, ChevronUp, ChevronDown, Paperclip, Tag, Trash2, Edit2, Download, Receipt, ExternalLink } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Modal from '@/components/ui/Modal';
-import LogExpenseForm from './LogExpenseForm';
+import LogExpenseForm, { type ExpenseEditData } from './LogExpenseForm';
 import AutoCategorizationRules, { type CategorizationRule } from './AutoCategorizationRules';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +19,7 @@ interface Expense {
   amount: number;
   paymentMethod: string;
   receipt: boolean;
+  receiptUrl: string | null;
   taxDeductible: boolean;
   status: ExpenseStatus;
   notes: string;
@@ -63,6 +64,7 @@ export default function ExpensesTableSection() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [logOpen, setLogOpen] = useState(false);
+  const [editExpense, setEditExpense] = useState<ExpenseEditData | null>(null);
   const [page, setPage] = useState(1);
   const [rules, setRules] = useState<CategorizationRule[]>([]);
   const perPage = 10;
@@ -93,6 +95,7 @@ export default function ExpensesTableSection() {
           amount: Number(row.amount),
           paymentMethod: row.payment_method,
           receipt: row.has_receipt,
+          receiptUrl: row.receipt_url ?? null,
           taxDeductible: row.tax_deductible,
           status: row.status as ExpenseStatus,
           notes: row.notes || '',
@@ -132,6 +135,36 @@ export default function ExpensesTableSection() {
     } catch {
       toast.error('Error approving expenses');
     }
+  };
+
+  const handleEdit = (exp: Expense) => {
+    setEditExpense({
+      id: exp.id,
+      vendor: exp.vendor,
+      category: exp.category,
+      amount: exp.amount,
+      date: exp.date,
+      paymentMethod: exp.paymentMethod,
+      taxDeductible: exp.taxDeductible,
+      notes: exp.notes,
+      receiptUrl: exp.receiptUrl,
+    });
+  };
+
+  const getReceiptSignedUrl = async (path: string): Promise<string | null> => {
+    // If it's already a full URL (legacy), return as-is
+    if (path.startsWith('http')) return path;
+    const { data, error } = await supabase.storage
+      .from('expense-receipts')
+      .createSignedUrl(path, 3600);
+    if (error || !data) return null;
+    return data.signedUrl;
+  };
+
+  const handleViewReceipt = async (receiptUrl: string) => {
+    const url = await getReceiptSignedUrl(receiptUrl);
+    if (!url) { toast.error('Could not load receipt'); return; }
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const filtered = useMemo(() => {
@@ -300,7 +333,16 @@ export default function ExpensesTableSection() {
                     <td className="px-4 py-3 text-right font-mono text-sm font-semibold text-foreground">₱{exp.amount.toLocaleString()}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{exp.paymentMethod}</td>
                     <td className="px-4 py-3 text-center">
-                      {exp.receipt ? (
+                      {exp.receiptUrl ? (
+                        <button
+                          onClick={() => handleViewReceipt(exp.receiptUrl!)}
+                          className="inline-flex items-center gap-1 text-xs text-success hover:text-success/80 transition-colors"
+                          title="View receipt"
+                        >
+                          <Paperclip size={11} />
+                          <ExternalLink size={10} />
+                        </button>
+                      ) : exp.receipt ? (
                         <span className="inline-flex items-center gap-1 text-xs text-success"><Paperclip size={11} />Yes</span>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
@@ -318,10 +360,18 @@ export default function ExpensesTableSection() {
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {canEdit && (
                           <>
-                            <button title="Edit" onClick={() => toast.info(`Editing ${exp.vendor}`)} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                            <button
+                              title="Edit"
+                              onClick={() => handleEdit(exp)}
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                            >
                               <Edit2 size={13} />
                             </button>
-                            <button title="Delete" onClick={() => handleDelete(exp.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-danger/10 hover:text-danger transition-colors">
+                            <button
+                              title="Delete"
+                              onClick={() => handleDelete(exp.id)}
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-danger/10 hover:text-danger transition-colors"
+                            >
                               <Trash2 size={13} />
                             </button>
                           </>
@@ -347,8 +397,20 @@ export default function ExpensesTableSection() {
           </div>
         )}
 
+        {/* Log new expense modal */}
         <Modal open={logOpen} onClose={() => setLogOpen(false)} title="Log Expense">
           <LogExpenseForm onClose={() => { setLogOpen(false); fetchExpenses(); }} rules={rules} />
+        </Modal>
+
+        {/* Edit expense modal */}
+        <Modal open={!!editExpense} onClose={() => setEditExpense(null)} title="Edit Expense">
+          {editExpense && (
+            <LogExpenseForm
+              onClose={() => { setEditExpense(null); fetchExpenses(); }}
+              rules={rules}
+              editData={editExpense}
+            />
+          )}
         </Modal>
       </div>
     </div>
