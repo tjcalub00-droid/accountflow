@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import ProfitLossReport from './ProfitLossReport';
 import BalanceSheetReport from './BalanceSheetReport';
 import CashFlowReport from './CashFlowReport';
+import { exportToCsv } from '@/lib/exportUtils';
 
 const tabs = [
   { id: 'pl', label: 'Profit & Loss' },
@@ -24,6 +25,59 @@ interface CompanyInfo {
   name: string;
   taxId: string;
   address: string;
+}
+
+type CsvRow = { section: string; account: string; current: number; prior: number };
+
+const reportStructures: Record<string, { section: string; accounts: string[] }[]> = {
+  pl: [
+    { section: 'Revenue', accounts: ['Consulting Services', 'Retainer Contracts', 'Project-Based Work', 'Other Income'] },
+    { section: 'Cost of Goods Sold', accounts: ['Subcontractor Fees', 'Project Tools & Licenses'] },
+    {
+      section: 'Operating Expenses',
+      accounts: [
+        'Owner Draw / Salary',
+        'Software Subscriptions',
+        'Marketing & Advertising',
+        'Office & Administrative',
+        'Travel & Entertainment',
+        'Business Insurance',
+        'Professional Services',
+      ],
+    },
+  ],
+  bs: [
+    { section: 'Current Assets', accounts: ['Cash & Cash Equivalents', 'Accounts Receivable', 'Prepaid Expenses', 'Other Current Assets'] },
+    { section: 'Fixed Assets', accounts: ['Computer Equipment', 'Office Furniture', 'Capitalized Software'] },
+    { section: 'Current Liabilities', accounts: ['Accounts Payable', 'Accrued Expenses', 'Tax Payable (Current)', 'Deferred Revenue'] },
+    { section: 'Long-Term Liabilities', accounts: ['Business Line of Credit'] },
+    { section: "Owner's Equity", accounts: ["Owner's Capital", 'Retained Earnings'] },
+  ],
+  cf: [
+    {
+      section: 'Operating Activities',
+      accounts: [
+        'Net Income',
+        'Depreciation & Amortization',
+        'Decrease (Increase) in AR',
+        'Increase (Decrease) in AP',
+        'Change in Accrued Expenses',
+        'Change in Deferred Revenue',
+      ],
+    },
+    { section: 'Investing Activities', accounts: ['Purchase of Equipment', 'Capitalized Software Development'] },
+    { section: 'Financing Activities', accounts: ["Owner's Draw", 'Repayment of Line of Credit'] },
+  ],
+};
+
+function getReportCsvRows(reportId: string): CsvRow[] {
+  const rows: CsvRow[] = [];
+  (reportStructures[reportId] ?? []).forEach((sec) => {
+    sec.accounts.forEach((account) => {
+      rows.push({ section: sec.section, account, current: 0, prior: 0 });
+    });
+  });
+  return rows;
 }
 
 function ExportModal({
@@ -216,6 +270,21 @@ export default function FinancialReportsContent() {
     }, 100);
   };
 
+  const handleExportCsv = () => {
+    const rows = getReportCsvRows(activeTab);
+    exportToCsv(
+      `${reportLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${period}`,
+      [
+        { header: 'Section', key: 'section' },
+        { header: 'Account', key: 'account' },
+        { header: 'Current', key: 'current' },
+        { header: 'Prior', key: 'prior' },
+      ],
+      rows
+    );
+    toast.success('Report exported as CSV');
+  };
+
   return (
     <div className="space-y-4">
       <ExportModal
@@ -268,6 +337,13 @@ export default function FinancialReportsContent() {
           >
             <RefreshCw size={14} />
             Refresh
+          </button>
+          <button
+            onClick={handleExportCsv}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground border border-border rounded-lg hover:bg-muted transition-colors"
+          >
+            <Download size={14} />
+            Export CSV
           </button>
           <button
             onClick={() => setExportModalOpen(true)}

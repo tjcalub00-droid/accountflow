@@ -1,12 +1,13 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Search, Plus, ChevronUp, ChevronDown, Send, CheckCircle, Eye, Trash2, Download, FileText } from 'lucide-react';
+import { Search, Plus, ChevronUp, ChevronDown, Send, CheckCircle, Eye, Trash2, FileText } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Modal from '@/components/ui/Modal';
 import CreateInvoiceForm from './CreateInvoiceForm';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import ExportButtons from '@/components/ui/ExportButtons';
 
 type InvoiceStatus = 'paid' | 'sent' | 'draft' | 'partial' | 'void';
 
@@ -204,10 +205,33 @@ export default function InvoicesTableSection() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <button className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground border border-border rounded-lg hover:bg-muted transition-colors">
-            <Download size={14} />
-            Export
-          </button>
+          <ExportButtons
+            filename="invoices"
+            title="Invoices Report"
+            subtitle={`${filtered.length} invoice(s)${statusFilter !== 'All' ? ` - Status: ${statusFilter}` : ''}`}
+            columns={[
+              { header: 'Invoice #', key: 'number' },
+              { header: 'Customer', key: 'customer' },
+              { header: 'Email', key: 'email' },
+              { header: 'Issue Date', key: 'issueDate' },
+              { header: 'Due Date', key: 'dueDate' },
+              { header: 'Subtotal', key: 'amount' },
+              { header: 'Tax', key: 'tax' },
+              { header: 'Total', key: 'total' },
+              { header: 'Status', key: 'status' },
+            ]}
+            rows={filtered.map((inv) => ({
+              number: inv.number,
+              customer: inv.customer,
+              email: inv.email,
+              issueDate: inv.issueDate,
+              dueDate: inv.dueDate,
+              amount: inv.amount.toFixed(2),
+              tax: inv.tax.toFixed(2),
+              total: inv.total.toFixed(2),
+              status: inv.status,
+            }))}
+          />
           {canEdit && (
             <button
               onClick={() => setCreateOpen(true)}

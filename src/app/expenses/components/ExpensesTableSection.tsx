@@ -1,13 +1,14 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Search, Plus, ChevronUp, ChevronDown, Paperclip, Tag, Trash2, Edit2, Download, Receipt, ExternalLink } from 'lucide-react';
+import { Search, Plus, ChevronUp, ChevronDown, Paperclip, Tag, Trash2, Edit2, Receipt, ExternalLink } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Modal from '@/components/ui/Modal';
 import LogExpenseForm, { type ExpenseEditData } from './LogExpenseForm';
 import AutoCategorizationRules, { type CategorizationRule } from './AutoCategorizationRules';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import ExportButtons from '@/components/ui/ExportButtons';
 
 type ExpenseStatus = 'approved' | 'pending' | 'rejected';
 
@@ -229,10 +230,33 @@ export default function ExpensesTableSection() {
             </select>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground border border-border rounded-lg hover:bg-muted transition-colors">
-              <Download size={14} />
-              Export
-            </button>
+            <ExportButtons
+              filename="expenses"
+              title="Expenses Report"
+              subtitle={`${filtered.length} expense(s)${categoryFilter !== 'All Categories' ? ` - Category: ${categoryFilter}` : ''}`}
+              columns={[
+                { header: 'Date', key: 'date' },
+                { header: 'Vendor', key: 'vendor' },
+                { header: 'Category', key: 'category' },
+                { header: 'Amount', key: 'amount' },
+                { header: 'Payment Method', key: 'paymentMethod' },
+                { header: 'Receipt Attached', key: 'receipt' },
+                { header: 'Tax Deductible', key: 'taxDeductible' },
+                { header: 'Status', key: 'status' },
+                { header: 'Notes', key: 'notes' },
+              ]}
+              rows={filtered.map((e) => ({
+                date: e.date,
+                vendor: e.vendor,
+                category: e.category,
+                amount: e.amount.toFixed(2),
+                paymentMethod: e.paymentMethod,
+                receipt: e.receipt || e.receiptUrl ? 'Yes' : 'No',
+                taxDeductible: e.taxDeductible ? 'Yes' : 'No',
+                status: e.status,
+                notes: e.notes,
+              }))}
+            />
             {canEdit && (
               <button
                 onClick={() => setLogOpen(true)}

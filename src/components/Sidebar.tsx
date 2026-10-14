@@ -20,6 +20,7 @@ import {
   UserCog,
   ImageIcon,
   UsersRound,
+  ShieldAlert,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/AppIcon';
@@ -30,6 +31,7 @@ const navGroups = [
     label: 'Overview',
     items: [
       { href: '/', label: 'Dashboard', icon: LayoutDashboard, badge: null },
+      { href: '/alert-hub', label: 'Alert Hub', icon: ShieldAlert, badge: null },
     ],
   },
   {
@@ -199,8 +201,9 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
       {/* Bottom */}
       <div className="border-t border-border px-2 py-3 space-y-0.5">
         <Link
-          href="#"
+          href="/alert-hub"
           title={collapsed ? 'Notifications' : undefined}
+          onClick={onNavClick}
           className="group relative flex items-center gap-3 px-2 py-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
         >
           <Bell size={18} />

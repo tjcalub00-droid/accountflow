@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Eye, Download } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import ExportButtons from '@/components/ui/ExportButtons';
 
 type PayrollStatus = 'paid' | 'processing' | 'scheduled' | 'pending';
 
@@ -74,8 +75,39 @@ function HalfTable({ title, rows, loading, half }: HalfTableProps) {
 
   return (
     <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-border bg-muted/20">
+      <div className="px-4 py-3 border-b border-border bg-muted/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <ExportButtons
+          filename={half === 'first' ? 'payroll-1st-half' : 'payroll-2nd-half'}
+          title={`Payroll Records - ${title}`}
+          subtitle={`${sorted.length} record(s)`}
+          columns={[
+            { header: 'Pay Date', key: 'payDate' },
+            { header: 'Employee', key: 'employee' },
+            { header: 'Role', key: 'role' },
+            { header: 'Pay Period', key: 'payPeriod' },
+            { header: 'Gross Pay', key: 'grossPay' },
+            { header: 'SSS', key: 'sss' },
+            { header: 'Pag-IBIG', key: 'pagibig' },
+            { header: 'HDMF', key: 'hdmf' },
+            { header: 'Deductions', key: 'deductions' },
+            { header: 'Net Pay', key: 'netPay' },
+            { header: 'Status', key: 'status' },
+          ]}
+          rows={sorted.map((r) => ({
+            payDate: r.payDate,
+            employee: r.employee,
+            role: r.role,
+            payPeriod: r.payPeriod,
+            grossPay: r.grossPay.toFixed(2),
+            sss: r.sss.toFixed(2),
+            pagibig: r.pagibig.toFixed(2),
+            hdmf: r.hdmf.toFixed(2),
+            deductions: r.deductions.toFixed(2),
+            netPay: r.netPay.toFixed(2),
+            status: r.status,
+          }))}
+        />
       </div>
       <div className="overflow-x-auto scrollbar-thin">
         <table className="w-full text-sm" style={{ minWidth: half === 'first' ? '1000px' : '800px' }}>
