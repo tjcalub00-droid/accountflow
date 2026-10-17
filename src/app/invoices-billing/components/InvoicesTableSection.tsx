@@ -8,6 +8,7 @@ import CreateInvoiceForm from './CreateInvoiceForm';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import ExportButtons from '@/components/ui/ExportButtons';
+import Image from 'next/image';
 
 type InvoiceStatus = 'paid' | 'sent' | 'draft' | 'partial' | 'void';
 
@@ -24,8 +25,11 @@ interface Invoice {
   status: InvoiceStatus;
 }
 
-const statusFilters = ['All', 'Draft', 'Sent', 'Paid', 'Partial', 'Void'];
+const statusFilters = ['All', 'Paid', 'Unpaid'];
 type SortKey = 'number' | 'customer' | 'issueDate' | 'dueDate' | 'total' | 'status';
+
+const isPaidStatus = (s: InvoiceStatus) => s === 'paid';
+const statusLabel = (s: InvoiceStatus) => (isPaidStatus(s) ? 'Paid' : 'Unpaid');
 
 function isSchemaError(error: any): boolean {
   if (!error) return false;
@@ -54,23 +58,43 @@ export default function InvoicesTableSection() {
   const [createOpen, setCreateOpen] = useState(false);
   const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [companyName, setCompanyName] = useState('');
   const [page, setPage] = useState(1);
   const perPage = 10;
 
   const canEdit = isOwner() || isAccountant();
 
+  useEffect(() => {
+    const loadCompany = async () => {
+      try {
+        const ownerId = getEffectiveOwnerId();
+        if (!ownerId) return;
+        const { data } = await supabase
+          .from('company_settings')
+          .select('company_name')
+          .eq('owner_id', ownerId)
+          .maybeSingle();
+        if (data?.company_name) setCompanyName(data.company_name);
+      } catch {
+        // ignore, fall back to default name
+      }
+    };
+    loadCompany();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const notifyChanged = () => {
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('invoices-changed'));
   };
 
-  const handleChangeStatus = async (inv: Invoice, value: 'open' | 'collected') => {
+  const handleChangeStatus = async (inv: Invoice, value: 'paid' | 'unpaid') => {
     if (!canEdit) return;
-    const newStatus: InvoiceStatus = value === 'collected' ? 'paid' : 'sent';
+    const newStatus: InvoiceStatus = value === 'paid' ? 'paid' : 'sent';
     setUpdatingStatus(true);
     try {
       const { error } = await supabase.from('invoices').update({ status: newStatus }).eq('id', inv.id);
       if (error) { toast.error('Failed to update invoice status'); return; }
-      toast.success(`${inv.number} marked as ${value === 'collected' ? 'Collected' : 'Open'}`);
+      toast.success(`${inv.number} marked as ${value === 'paid' ? 'Paid' : 'Unpaid'}`);
       setViewInvoice({ ...inv, status: newStatus });
       await fetchInvoices();
       notifyChanged();
@@ -160,7 +184,9 @@ export default function InvoicesTableSection() {
       );
     }
     if (statusFilter !== 'All') {
-      list = list.filter((inv) => inv.status === statusFilter.toLowerCase());
+      list = list.filter((inv) =>
+        statusFilter === 'Paid' ? isPaidStatus(inv.status) : !isPaidStatus(inv.status)
+      );
     }
     list.sort((a, b) => {
       let va: string | number = a[sortKey] as string | number;
@@ -255,7 +281,7 @@ export default function InvoicesTableSection() {
               amount: inv.amount.toFixed(2),
               tax: inv.tax.toFixed(2),
               total: inv.total.toFixed(2),
-              status: inv.status,
+              status: statusLabel(inv.status),
             }))}
           />
           {canEdit && (
@@ -286,7 +312,7 @@ export default function InvoicesTableSection() {
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-success border border-success/30 rounded-lg hover:bg-success/10 transition-colors"
           >
             <CheckCircle size={12} />
-            Mark Paid
+            Mark as Paid
           </button>
           <button
             onClick={() => { toast.error(`${selectedRows.size} invoices deleted`); setSelectedRows(new Set()); }}
@@ -367,7 +393,7 @@ export default function InvoicesTableSection() {
                   <td className="px-4 py-3 text-right font-mono text-sm text-foreground">₱{inv.amount.toLocaleString()}</td>
                   <td className="px-4 py-3 text-right font-mono text-sm text-muted-foreground">₱{inv.tax.toLocaleString()}</td>
                   <td className="px-4 py-3 text-right font-mono text-sm font-bold text-foreground">₱{inv.total.toLocaleString()}</td>
-                  <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
+                  <td className="px-4 py-3"><StatusBadge status={isPaidStatus(inv.status) ? 'paid' : 'sent'} label={statusLabel(inv.status)} /></td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button title="View" onClick={() => setViewInvoice(inv)} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
@@ -407,6 +433,16 @@ export default function InvoicesTableSection() {
       <Modal open={!!viewInvoice} onClose={() => setViewInvoice(null)} title={viewInvoice ? `Invoice ${viewInvoice.number}` : 'Invoice'}>
         {viewInvoice && (
           <div className="p-6 space-y-5">
+            <div className="flex items-center gap-3 pb-4 border-b border-border">
+              <Image
+                src="/assets/images/istockphoto-1271371970-612x612-1789378855208.jpg"
+                alt="Company logo"
+                width={56}
+                height={56}
+                className="rounded object-cover flex-shrink-0"
+              />
+              <p className="text-lg font-bold text-foreground">{companyName || 'Odin'}</p>
+            </div>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Billed To</p>
@@ -418,19 +454,19 @@ export default function InvoicesTableSection() {
                 <div className="mt-1 flex sm:justify-end">
                   {canEdit ? (
                     <select
-                      value={viewInvoice.status === 'paid' ? 'collected' : 'open'}
+                      value={isPaidStatus(viewInvoice.status) ? 'paid' : 'unpaid'}
                       disabled={updatingStatus}
-                      onChange={(e) => handleChangeStatus(viewInvoice, e.target.value as 'open' | 'collected')}
+                      onChange={(e) => handleChangeStatus(viewInvoice, e.target.value as 'paid' | 'unpaid')}
                       className="px-3 py-2 text-sm font-semibold bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
                       aria-label="Change invoice status"
                     >
-                      <option value="open">Open</option>
-                      <option value="collected">Collected</option>
+                      <option value="paid">Paid</option>
+                      <option value="unpaid">Unpaid</option>
                     </select>
                   ) : (
                     <StatusBadge
-                      status={viewInvoice.status === 'paid' ? 'paid' : 'sent'}
-                      label={viewInvoice.status === 'paid' ? 'Collected' : 'Open'}
+                      status={isPaidStatus(viewInvoice.status) ? 'paid' : 'sent'}
+                      label={statusLabel(viewInvoice.status)}
                     />
                   )}
                 </div>
