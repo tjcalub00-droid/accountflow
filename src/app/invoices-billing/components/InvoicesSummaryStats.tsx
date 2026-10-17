@@ -16,6 +16,7 @@ const formatPeso = (n: number) =>
 
 export default function InvoicesSummaryStats() {
   const { getEffectiveOwnerId } = useAuth();
+  const effectiveOwnerId = getEffectiveOwnerId();
   const [totals, setTotals] = useState<InvoiceTotals>({
     collectedAmount: 0,
     collectedCount: 0,
@@ -25,7 +26,7 @@ export default function InvoicesSummaryStats() {
 
   const loadTotals = useCallback(async () => {
     try {
-      const ownerId = getEffectiveOwnerId();
+      const ownerId = effectiveOwnerId;
       if (!ownerId) return;
       const supabase = createClient();
       const { data, error } = await supabase
@@ -54,7 +55,7 @@ export default function InvoicesSummaryStats() {
     } catch {
       // keep previous totals on failure
     }
-  }, [getEffectiveOwnerId]);
+  }, [effectiveOwnerId]);
 
   useEffect(() => {
     loadTotals();

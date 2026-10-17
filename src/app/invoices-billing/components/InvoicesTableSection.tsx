@@ -58,16 +58,18 @@ export default function InvoicesTableSection() {
   const [createOpen, setCreateOpen] = useState(false);
   const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<{ invoice: Invoice; value: 'paid' | 'unpaid' } | null>(null);
   const [companyName, setCompanyName] = useState('');
   const [page, setPage] = useState(1);
   const perPage = 10;
 
   const canEdit = isOwner() || isAccountant();
+  const effectiveOwnerId = getEffectiveOwnerId();
 
   useEffect(() => {
     const loadCompany = async () => {
       try {
-        const ownerId = getEffectiveOwnerId();
+        const ownerId = effectiveOwnerId;
         if (!ownerId) return;
         const { data } = await supabase
           .from('company_settings')
@@ -81,10 +83,17 @@ export default function InvoicesTableSection() {
     };
     loadCompany();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [effectiveOwnerId]);
 
   const notifyChanged = () => {
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('invoices-changed'));
+  };
+
+  const requestStatusChange = (inv: Invoice, value: 'paid' | 'unpaid') => {
+    if (!canEdit) return;
+    const current = isPaidStatus(inv.status) ? 'paid' : 'unpaid';
+    if (current === value) return;
+    setPendingStatus({ invoice: inv, value });
   };
 
   const handleChangeStatus = async (inv: Invoice, value: 'paid' | 'unpaid') => {
@@ -102,14 +111,15 @@ export default function InvoicesTableSection() {
       toast.error('Error updating invoice status');
     } finally {
       setUpdatingStatus(false);
+      setPendingStatus(null);
     }
   };
 
   const fetchInvoices = async () => {
+    const ownerId = effectiveOwnerId;
+    if (!ownerId) return;
     setLoadingData(true);
     try {
-      const ownerId = getEffectiveOwnerId();
-      if (!ownerId) return;
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
@@ -123,15 +133,15 @@ export default function InvoicesTableSection() {
       setInvoices(
         (data || []).map((row: any) => ({
           id: row.id,
-          number: row.invoice_number,
-          customer: row.customer,
-          email: row.customer_email,
-          issueDate: row.issue_date,
-          dueDate: row.due_date,
-          amount: Number(row.amount),
-          tax: Number(row.tax),
-          total: Number(row.total),
-          status: row.status === 'overdue' ? 'sent' : (row.status as InvoiceStatus),
+          number: row.invoice_number ?? '',
+          customer: row.customer ?? '',
+          email: row.customer_email ?? '',
+          issueDate: row.issue_date ?? '',
+          dueDate: row.due_date ?? '',
+          amount: Number(row.amount) || 0,
+          tax: Number(row.tax) || 0,
+          total: Number(row.total) || 0,
+          status: (row.status === 'paid' ? 'paid' : row.status === 'void' ? 'void' : 'sent') as InvoiceStatus,
         }))
       );
     } catch (err: any) {
@@ -142,8 +152,13 @@ export default function InvoicesTableSection() {
   };
 
   useEffect(() => {
+    if (!effectiveOwnerId) return;
     fetchInvoices();
-  }, []);
+    const handler = () => fetchInvoices();
+    window.addEventListener('invoices-changed', handler);
+    return () => window.removeEventListener('invoices-changed', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveOwnerId]);
 
   const handleDelete = async (id: string) => {
     if (!canEdit) return;
@@ -456,7 +471,7 @@ export default function InvoicesTableSection() {
                     <select
                       value={isPaidStatus(viewInvoice.status) ? 'paid' : 'unpaid'}
                       disabled={updatingStatus}
-                      onChange={(e) => handleChangeStatus(viewInvoice, e.target.value as 'paid' | 'unpaid')}
+                      onChange={(e) => requestStatusChange(viewInvoice, e.target.value as 'paid' | 'unpaid')}
                       className="px-3 py-2 text-sm font-semibold bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
                       aria-label="Change invoice status"
                     >
@@ -497,6 +512,45 @@ export default function InvoicesTableSection() {
                 <span className="text-foreground">Total</span>
                 <span className="font-mono text-foreground">₱{viewInvoice.total.toLocaleString()}</span>
               </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!pendingStatus}
+        onClose={() => { if (!updatingStatus) setPendingStatus(null); }}
+        title="Confirm Status Change"
+        size="sm"
+      >
+        {pendingStatus && (
+          <div className="p-6 space-y-5">
+            <p className="text-sm text-foreground">
+              Are you sure you want to change invoice{' '}
+              <span className="font-semibold font-mono">{pendingStatus.invoice.number}</span> from{' '}
+              <span className="font-semibold">{statusLabel(pendingStatus.invoice.status)}</span> to{' '}
+              <span className="font-semibold">{pendingStatus.value === 'paid' ? 'Paid' : 'Unpaid'}</span>?
+            </p>
+            <p className="text-xs text-muted-foreground">
+              This will update your Paid and Unpaid totals and financial reports.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-border">
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={() => setPendingStatus(null)}
+                className="px-4 py-2 text-sm font-semibold text-muted-foreground border border-border rounded-lg hover:bg-muted transition-colors disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={() => handleChangeStatus(pendingStatus.invoice, pendingStatus.value)}
+                className="px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
+              >
+                {updatingStatus ? 'Updating...' : 'Confirm'}
+              </button>
             </div>
           </div>
         )}
