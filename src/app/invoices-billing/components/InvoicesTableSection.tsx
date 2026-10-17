@@ -52,10 +52,34 @@ export default function InvoicesTableSection() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [createOpen, setCreateOpen] = useState(false);
+  const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [page, setPage] = useState(1);
   const perPage = 10;
 
   const canEdit = isOwner() || isAccountant();
+
+  const notifyChanged = () => {
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('invoices-changed'));
+  };
+
+  const handleChangeStatus = async (inv: Invoice, value: 'open' | 'collected') => {
+    if (!canEdit) return;
+    const newStatus: InvoiceStatus = value === 'collected' ? 'paid' : 'sent';
+    setUpdatingStatus(true);
+    try {
+      const { error } = await supabase.from('invoices').update({ status: newStatus }).eq('id', inv.id);
+      if (error) { toast.error('Failed to update invoice status'); return; }
+      toast.success(`${inv.number} marked as ${value === 'collected' ? 'Collected' : 'Open'}`);
+      setViewInvoice({ ...inv, status: newStatus });
+      await fetchInvoices();
+      notifyChanged();
+    } catch {
+      toast.error('Error updating invoice status');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   const fetchInvoices = async () => {
     setLoadingData(true);
@@ -104,6 +128,7 @@ export default function InvoicesTableSection() {
       if (error) { toast.error('Failed to delete invoice'); return; }
       toast.success('Invoice deleted');
       fetchInvoices();
+      notifyChanged();
     } catch {
       toast.error('Error deleting invoice');
     }
@@ -117,6 +142,7 @@ export default function InvoicesTableSection() {
       toast.success(`${ids.length} invoice(s) marked as paid`);
       setSelectedRows(new Set());
       fetchInvoices();
+      notifyChanged();
     } catch {
       toast.error('Error updating invoices');
     }
@@ -344,7 +370,7 @@ export default function InvoicesTableSection() {
                   <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button title="View" onClick={() => toast.info(`Viewing ${inv.number}`)} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                      <button title="View" onClick={() => setViewInvoice(inv)} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                         <Eye size={13} />
                       </button>
                       {canEdit && (
@@ -375,7 +401,69 @@ export default function InvoicesTableSection() {
       )}
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Create Invoice">
-        <CreateInvoiceForm onClose={() => { setCreateOpen(false); fetchInvoices(); }} />
+        <CreateInvoiceForm onClose={() => { setCreateOpen(false); fetchInvoices(); notifyChanged(); }} />
+      </Modal>
+
+      <Modal open={!!viewInvoice} onClose={() => setViewInvoice(null)} title={viewInvoice ? `Invoice ${viewInvoice.number}` : 'Invoice'}>
+        {viewInvoice && (
+          <div className="p-6 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Billed To</p>
+                <p className="text-base font-semibold text-foreground mt-1">{viewInvoice.customer}</p>
+                <p className="text-sm text-muted-foreground">{viewInvoice.email}</p>
+              </div>
+              <div className="sm:text-right">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Status</p>
+                <div className="mt-1 flex sm:justify-end">
+                  {canEdit ? (
+                    <select
+                      value={viewInvoice.status === 'paid' ? 'collected' : 'open'}
+                      disabled={updatingStatus}
+                      onChange={(e) => handleChangeStatus(viewInvoice, e.target.value as 'open' | 'collected')}
+                      className="px-3 py-2 text-sm font-semibold bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
+                      aria-label="Change invoice status"
+                    >
+                      <option value="open">Open</option>
+                      <option value="collected">Collected</option>
+                    </select>
+                  ) : (
+                    <StatusBadge
+                      status={viewInvoice.status === 'paid' ? 'paid' : 'sent'}
+                      label={viewInvoice.status === 'paid' ? 'Collected' : 'Open'}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 border-t border-border pt-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Issue Date</p>
+                <p className="text-sm text-foreground mt-1">{viewInvoice.issueDate}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Due Date</p>
+                <p className="text-sm text-foreground mt-1">{viewInvoice.dueDate}</p>
+              </div>
+            </div>
+
+            <div className="border-t border-border pt-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span className="font-mono text-foreground">₱{viewInvoice.amount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Tax</span>
+                <span className="font-mono text-foreground">₱{viewInvoice.tax.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-base font-bold border-t border-border pt-2">
+                <span className="text-foreground">Total</span>
+                <span className="font-mono text-foreground">₱{viewInvoice.total.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
