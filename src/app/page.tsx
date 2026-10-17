@@ -20,21 +20,16 @@ export default function DashboardPage() {
     const ownerId = getEffectiveOwnerId();
     if (!ownerId) return;
     const supabase = createClient();
-    supabase
-      .from('company_settings')
-      .select('company_name')
-      .eq('owner_id', ownerId)
-      .maybeSingle()
-      .then(({ data }) => {
+    supabase?.from('company_settings')?.select('company_name')?.eq('owner_id', ownerId)?.maybeSingle()?.then(({ data }) => {
         setCompanyName(data?.company_name || '');
       });
   }, [authLoading, profile]);
 
   useEffect(() => {
     const now = new Date();
-    setFiscalYear(String(now.getFullYear()));
+    setFiscalYear(String(now?.getFullYear()));
     setLastUpdated(
-      now.toLocaleString('en-US', {
+      now?.toLocaleString('en-US', {
         month: 'short',
         day: 'numeric',
         year: 'numeric',

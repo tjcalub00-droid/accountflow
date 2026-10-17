@@ -66,6 +66,8 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
   const router = useRouter();
   const { profile, signOut, isOwner } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
+  const [overviewOpen, setOverviewOpen] = useState(false);
+  const isMobileSidebar = !collapsed && typeof onMouseEnter === 'undefined';
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -118,14 +120,33 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto scrollbar-thin py-3 px-2">
-        {navGroups.map((group) => (
+        {navGroups.map((group) => {
+          const isOverview = group.label === 'Overview';
+          const groupCollapsible = isMobileSidebar && isOverview;
+          const groupVisible = !groupCollapsible || overviewOpen;
+          return (
           <div key={`group-${group.label}`} className="mb-4">
             {!collapsed && (
-              <p className="text-xs font-600 uppercase tracking-widest text-muted-foreground px-2 mb-1">
-                {group.label}
-              </p>
+              groupCollapsible ? (
+                <button
+                  type="button"
+                  onClick={() => setOverviewOpen((v) => !v)}
+                  aria-expanded={overviewOpen}
+                  className="w-full flex items-center justify-between text-xs font-600 uppercase tracking-widest text-muted-foreground px-2 mb-1 py-1 rounded hover:bg-muted"
+                >
+                  <span>{group.label}</span>
+                  <ChevronRight
+                    size={14}
+                    className={`transition-transform duration-200 ${overviewOpen ? 'rotate-90' : ''}`}
+                  />
+                </button>
+              ) : (
+                <p className="text-xs font-600 uppercase tracking-widest text-muted-foreground px-2 mb-1">
+                  {group.label}
+                </p>
+              )
             )}
-            {group.items.map((item) => {
+            {groupVisible && group.items.map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
               return (
@@ -152,7 +173,8 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
               );
             })}
           </div>
-        ))}
+          );
+        })}
 
         {/* Owner-only: User Management */}
         {isOwner() && (
