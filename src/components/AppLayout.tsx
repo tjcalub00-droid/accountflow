@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import Sidebar from './Sidebar';
 import { Menu, X } from 'lucide-react';
 
@@ -8,6 +9,7 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ children }: AppLayoutProps) {
+  const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(true);
   const [hovered, setHovered] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -24,6 +26,21 @@ export default function AppLayout({ children }: AppLayoutProps) {
   useEffect(() => {
     if (!isMobile) setMobileOpen(false);
   }, [isMobile]);
+
+  // Auto-hide sidebar whenever the route changes
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Auto-hide sidebar on Escape
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobileOpen]);
 
   const isExpanded = !collapsed || hovered;
 
@@ -42,20 +59,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
         className="fixed top-4 left-4 z-50 lg:hidden flex items-center justify-center w-9 h-9 rounded-lg bg-card border border-border shadow-sm text-foreground"
         onClick={() => setMobileOpen((v) => !v)}
         aria-label="Toggle menu"
+        aria-expanded={mobileOpen}
       >
         {mobileOpen ? <X size={18} /> : <Menu size={18} />}
       </button>
 
       {/* Sidebar:
-          - Mobile: fully hidden (translate-x-full) by default, slides in when mobileOpen
+          - Mobile (<lg): hidden off-canvas by default, slides in when mobileOpen, auto-hides on navigation
           - Desktop (lg+): always visible, supports hover expand
       */}
       <div
-        className={`fixed left-0 top-0 h-full z-40 transition-transform duration-300 ${
-          isMobile
-            ? mobileOpen
-              ? 'translate-x-0' :'-translate-x-full' :'translate-x-0'
-        }`}
+        aria-hidden={isMobile && !mobileOpen}
+        className={`fixed left-0 top-0 h-full z-40 transition-transform duration-300 max-lg:-translate-x-full ${
+          mobileOpen ? 'max-lg:translate-x-0' : 'max-lg:invisible'
+        } lg:translate-x-0`}
       >
         <Sidebar
           collapsed={isMobile ? false : !isExpanded}

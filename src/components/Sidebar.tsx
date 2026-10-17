@@ -239,6 +239,7 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
         <Link
           href="#"
           title={collapsed ? 'Settings' : undefined}
+          onClick={onNavClick}
           className="group relative flex items-center gap-3 px-2 py-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
         >
           <Settings size={18} />
@@ -252,6 +253,7 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
         <Link
           href="#"
           title={collapsed ? 'Help' : undefined}
+          onClick={onNavClick}
           className="group relative flex items-center gap-3 px-2 py-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
         >
           <HelpCircle size={18} />
@@ -287,7 +289,7 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
       {/* Toggle button */}
       <button
         onClick={onToggle}
-        className="absolute -right-3 top-20 w-6 h-6 bg-card border border-border rounded-full flex items-center justify-center shadow-sm hover:bg-muted transition-colors z-50"
+        className="hidden lg:flex absolute -right-3 top-20 w-6 h-6 bg-card border border-border rounded-full items-center justify-center shadow-sm hover:bg-muted transition-colors z-50"
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
