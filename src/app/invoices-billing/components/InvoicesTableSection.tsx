@@ -753,7 +753,6 @@ export default function InvoicesTableSection() {
                 <label className="block text-xs font-semibold text-foreground mb-1">Subtotal (PHP)</label>
                 <input
                   type="number"
-                  inputMode="decimal"
                   min="0"
                   step="0.01"
                   value={editForm.amount}
@@ -765,7 +764,6 @@ export default function InvoicesTableSection() {
                 <label className="block text-xs font-semibold text-foreground mb-1">Tax (PHP)</label>
                 <input
                   type="number"
-                  inputMode="decimal"
                   min="0"
                   step="0.01"
                   value={editForm.tax}

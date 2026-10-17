@@ -131,7 +131,7 @@ function PayrollForm({
       </div>
       <div>
         <label className={labelClass}>Gross Income <span className="text-danger">*</span></label>
-        <input type="number" inputMode="decimal" step="0.01" min="0" {...register('grossIncome', { required: 'Required', valueAsNumber: true, min: { value: 0, message: 'Must be ≥ 0' } })} className={`${inputClass} font-mono`} placeholder="0.00" />
+        <input type="number" step="0.01" min="0" {...register('grossIncome', { required: 'Required', valueAsNumber: true, min: { value: 0, message: 'Must be ≥ 0' } })} className={`${inputClass} font-mono`} placeholder="0.00" />
         {errors.grossIncome && <p className="text-xs text-danger mt-1">{errors.grossIncome.message}</p>}
       </div>
       <div>
@@ -147,7 +147,7 @@ function PayrollForm({
           ] as { key: keyof PayrollFormData; label: string }[]).map(({ key, label }) => (
             <div key={key}>
               <label className={labelClass}>{label}</label>
-              <input type="number" inputMode="decimal" step="0.01" min="0" {...register(key, { valueAsNumber: true, min: { value: 0, message: 'Must be ≥ 0' } })} className={`${inputClass} font-mono`} placeholder="0.00" />
+              <input type="number" step="0.01" min="0" {...register(key, { valueAsNumber: true, min: { value: 0, message: 'Must be ≥ 0' } })} className={`${inputClass} font-mono`} placeholder="0.00" />
             </div>
           ))}
         </div>
@@ -222,7 +222,7 @@ function GenericVoucherForm({
       </div>
       <div>
         <label className={labelClass}>{amountLabel} <span className="text-danger">*</span></label>
-        <input type="number" inputMode="decimal" step="0.01" min="0.01" {...register('amount', { required: 'Amount is required', valueAsNumber: true, min: { value: 0.01, message: 'Must be > 0' } })} className={`${inputClass} font-mono`} placeholder="0.00" />
+        <input type="number" step="0.01" min="0.01" {...register('amount', { required: 'Amount is required', valueAsNumber: true, min: { value: 0.01, message: 'Must be > 0' } })} className={`${inputClass} font-mono`} placeholder="0.00" />
         {errors.amount && <p className="text-xs text-danger mt-1">{errors.amount.message}</p>}
       </div>
       <div>
