@@ -18,6 +18,9 @@ export default function DashboardBentoGrid() {
   const [paidInvoiceCount, setPaidInvoiceCount] = useState(0);
   const [accountsPayable, setAccountsPayable] = useState(0);
   const [unpaidBillCount, setUnpaidBillCount] = useState(0);
+  const [unpaidInvoiceTotal, setUnpaidInvoiceTotal] = useState(0);
+  const [unpaidInvoiceCount, setUnpaidInvoiceCount] = useState(0);
+  const [currentMonth, setCurrentMonth] = useState('');
 
   useEffect(() => {
     if (authLoading || !profile) return;
@@ -27,17 +30,21 @@ export default function DashboardBentoGrid() {
     let cancelled = false;
 
     const load = async () => {
-      const [inv, exp] = await Promise.all([
+      const [inv, exp, unpaidInv] = await Promise.all([
         supabase.from('invoices').select('total').eq('owner_id', ownerId).eq('status', 'paid'),
         supabase.from('expenses').select('amount').eq('owner_id', ownerId).eq('status', 'pending'),
+        supabase.from('invoices').select('total').eq('owner_id', ownerId).neq('status', 'paid').neq('status', 'void'),
       ]);
       if (cancelled) return;
       const paidRows = inv.data ?? [];
       const pendingRows = exp.data ?? [];
+      const unpaidInvRows = unpaidInv.data ?? [];
       setAccountsReceivable(paidRows.reduce((s, r) => s + (Number(r.total) || 0), 0));
       setPaidInvoiceCount(paidRows.length);
       setAccountsPayable(pendingRows.reduce((s, r) => s + (Number(r.amount) || 0), 0));
       setUnpaidBillCount(pendingRows.length);
+      setUnpaidInvoiceTotal(unpaidInvRows.reduce((s, r) => s + (Number(r.total) || 0), 0));
+      setUnpaidInvoiceCount(unpaidInvRows.length);
     };
     load();
 
@@ -71,12 +78,16 @@ export default function DashboardBentoGrid() {
       year: 'numeric',
     });
     setCurrentDate(formatted);
+    setCurrentMonth(now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }));
   }, []);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4 gap-4">
       {/* AR */}
       <div className="col-span-1 border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow bg-[rgba(186,251,177,1)]">
+        {currentMonth && (
+          <p className="text-xs font-medium text-muted-foreground mb-2">for {currentMonth}</p>
+        )}
         <div className="flex items-start justify-between mb-3">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Accounts Receivable
@@ -110,6 +121,14 @@ export default function DashboardBentoGrid() {
             <ArrowDownRight size={11} />0.0%
           </span>
           <span className="text-xs text-muted-foreground">{unpaidBillCount} unpaid bills</span>
+        </div>
+        <div className="mt-3 pt-3 border-t border-black/10 flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold text-muted-foreground">
+            Unpaid invoices ({unpaidInvoiceCount})
+          </span>
+          <span className="text-sm font-bold font-mono text-foreground">
+            {formatPeso(unpaidInvoiceTotal)}
+          </span>
         </div>
       </div>
 
