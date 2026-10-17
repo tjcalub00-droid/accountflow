@@ -158,7 +158,7 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
         {isOwner() && (
           <div className="mb-4">
             {!collapsed && (
-              <p className="text-xs font-600 uppercase tracking-widest text-muted-foreground px-2 mb-1">
+              <p className="text-xs font-600 uppercase tracking-widest text-muted-foreground px-2 mb-1 font-extrabold not-italic underline">
                 Admin
               </p>
             )}
@@ -171,7 +171,7 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
               }`}
             >
               <UserCog size={18} className="flex-shrink-0" />
-              {!collapsed && <span className="text-sm flex-1 truncate">User Management</span>}
+              {!collapsed && <span className="text-sm flex-1 truncate font-semibold">User Management</span>}
               {collapsed && (
                 <div className="absolute left-full ml-2 px-2 py-1 bg-foreground text-background text-xs rounded whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
                   User Management
@@ -187,7 +187,7 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
               }`}
             >
               <Settings size={18} className="flex-shrink-0" />
-              {!collapsed && <span className="text-sm flex-1 truncate">Company Settings</span>}
+              {!collapsed && <span className="text-sm flex-1 truncate font-semibold">Company Settings</span>}
               {collapsed && (
                 <div className="absolute left-full ml-2 px-2 py-1 bg-foreground text-background text-xs rounded whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
                   Company Settings

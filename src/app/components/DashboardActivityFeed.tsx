@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import Icon from '@/components/ui/AppIcon';
+
 
 interface ActivityItem {
   key: string;
@@ -192,7 +194,7 @@ export default function DashboardActivityFeed() {
                     <Icon size={15} className="text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">{item.title}</p>
+                    <p className="text-sm text-foreground truncate font-extralight">{item.title}</p>
                     <p className="text-xs text-muted-foreground truncate">{item.detail}</p>
                   </div>
                   <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">

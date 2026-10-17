@@ -19,7 +19,7 @@ export default function DashboardBentoGrid() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4 gap-4">
       {/* AR */}
-      <div className="col-span-1 bg-card border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+      <div className="col-span-1 border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow bg-[rgba(186,251,177,1)]">
         <div className="flex items-start justify-between mb-3">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Accounts Receivable
@@ -38,7 +38,7 @@ export default function DashboardBentoGrid() {
       </div>
 
       {/* AP */}
-      <div className="col-span-1 bg-card border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+      <div className="col-span-1 border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow bg-[rgba(253,253,165,1)]">
         <div className="flex items-start justify-between mb-3">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Accounts Payable
@@ -57,7 +57,7 @@ export default function DashboardBentoGrid() {
       </div>
 
       {/* Overdue */}
-      <div className="col-span-1 bg-card border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+      <div className="col-span-1 border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow bg-[rgba(254,144,144,1)]">
         <div className="flex items-start justify-between mb-3">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Overdue Invoices
@@ -74,7 +74,7 @@ export default function DashboardBentoGrid() {
       </div>
 
       {/* Monthly Revenue */}
-      <div className="col-span-1 bg-card border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+      <div className="col-span-1 border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow bg-[rgba(177,177,251,1)]">
         <div className="flex items-start justify-between mb-3">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Monthly Revenue
@@ -96,9 +96,9 @@ export default function DashboardBentoGrid() {
       </div>
 
       {/* Monthly Expenses */}
-      <div className="col-span-1 bg-card border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+      <div className="col-span-1 border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow bg-[rgba(231,139,249,1)]">
         <div className="flex items-start justify-between mb-3">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-thin">
             Monthly Expenses
           </p>
           <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
@@ -118,7 +118,7 @@ export default function DashboardBentoGrid() {
       </div>
 
       {/* Tax Liability */}
-      <div className="col-span-1 bg-card border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+      <div className="col-span-1 border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow bg-[rgba(253,253,165,1)]">
         <div className="flex items-start justify-between mb-3">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Tax Liability YTD
