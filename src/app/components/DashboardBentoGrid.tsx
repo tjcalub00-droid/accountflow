@@ -2,9 +2,45 @@
 
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, FileX, AlertCircle, CreditCard,  } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+
+const formatPeso = (value: number): string =>
+  `${value < 0 ? '-' : ''}₱${Math.abs(value).toLocaleString('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`;
 
 export default function DashboardBentoGrid() {
+  const { profile, loading: authLoading, getEffectiveOwnerId } = useAuth();
   const [currentDate, setCurrentDate] = useState('');
+  const [accountsReceivable, setAccountsReceivable] = useState(0);
+  const [paidInvoiceCount, setPaidInvoiceCount] = useState(0);
+  const [accountsPayable, setAccountsPayable] = useState(0);
+  const [unpaidBillCount, setUnpaidBillCount] = useState(0);
+
+  useEffect(() => {
+    if (authLoading || !profile) return;
+    const ownerId = getEffectiveOwnerId();
+    if (!ownerId) return;
+    const supabase = createClient();
+
+    const load = async () => {
+      const [inv, exp] = await Promise.all([
+        supabase.from('invoices').select('total').eq('owner_id', ownerId).eq('status', 'paid'),
+        supabase.from('expenses').select('amount').eq('owner_id', ownerId).eq('status', 'pending'),
+      ]);
+      const paidRows = inv.data ?? [];
+      const pendingRows = exp.data ?? [];
+      setAccountsReceivable(paidRows.reduce((s, r) => s + (Number(r.total) || 0), 0));
+      setPaidInvoiceCount(paidRows.length);
+      setAccountsPayable(pendingRows.reduce((s, r) => s + (Number(r.amount) || 0), 0));
+      setUnpaidBillCount(pendingRows.length);
+    };
+    load();
+  }, [authLoading, profile]);
+
+  const monthlyRevenue = accountsReceivable - accountsPayable;
 
   useEffect(() => {
     const now = new Date();
@@ -28,12 +64,12 @@ export default function DashboardBentoGrid() {
             <TrendingUp size={15} className="text-primary" />
           </div>
         </div>
-        <p className="text-2xl font-bold font-mono text-foreground">₱0</p>
+        <p className="text-2xl font-bold font-mono text-foreground">{formatPeso(accountsReceivable)}</p>
         <div className="flex items-center gap-1.5 mt-2">
           <span className="text-xs font-semibold text-muted-foreground flex items-center gap-0.5">
             <ArrowUpRight size={11} />0.0%
           </span>
-          <span className="text-xs text-muted-foreground">0 open invoices</span>
+          <span className="text-xs text-muted-foreground">{paidInvoiceCount} paid invoices</span>
         </div>
       </div>
 
@@ -47,12 +83,12 @@ export default function DashboardBentoGrid() {
             <TrendingDown size={15} className="text-warning" />
           </div>
         </div>
-        <p className="text-2xl font-bold font-mono text-foreground">₱0</p>
+        <p className="text-2xl font-bold font-mono text-foreground">{formatPeso(accountsPayable)}</p>
         <div className="flex items-center gap-1.5 mt-2">
           <span className="text-xs font-semibold text-muted-foreground flex items-center gap-0.5">
             <ArrowDownRight size={11} />0.0%
           </span>
-          <span className="text-xs text-muted-foreground">0 unpaid bills</span>
+          <span className="text-xs text-muted-foreground">{unpaidBillCount} unpaid bills</span>
         </div>
       </div>
 
@@ -83,7 +119,7 @@ export default function DashboardBentoGrid() {
             <ArrowUpRight size={15} className="text-success" />
           </div>
         </div>
-        <p className="text-2xl font-bold font-mono text-foreground">₱0</p>
+        <p className="text-2xl font-bold font-mono text-foreground">{formatPeso(monthlyRevenue)}</p>
         <div className="flex items-center gap-1.5 mt-2">
           <span className="text-xs font-semibold text-muted-foreground flex items-center gap-0.5">
             <ArrowUpRight size={11} />0.0%
