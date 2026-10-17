@@ -223,6 +223,7 @@ export default function CreateInvoiceForm({ onClose }: Props) {
               <div className="col-span-2">
                 <input
                   type="number"
+                  inputMode="numeric"
                   min="1"
                   {...register(`items.${index}.quantity`, {
                     valueAsNumber: true,
@@ -239,6 +240,7 @@ export default function CreateInvoiceForm({ onClose }: Props) {
               <div className="col-span-2">
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="0.01"
                   {...register(`items.${index}.rate`, {

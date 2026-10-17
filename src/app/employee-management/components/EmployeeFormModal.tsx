@@ -157,6 +157,7 @@ export default function EmployeeFormModal({ open, employee, onClose, onSaved }: 
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 min={0}
                 step="0.01"
                 {...register('monthlySalary', {
@@ -172,6 +173,7 @@ export default function EmployeeFormModal({ open, employee, onClose, onSaved }: 
               <label className="block text-xs font-semibold text-foreground mb-1">SSS Rate (₱/month)</label>
               <input
                 type="number"
+                inputMode="decimal"
                 min={0}
                 step="0.01"
                 {...register('sssRate', { min: { value: 0, message: 'Must be 0 or more' } })}
@@ -184,6 +186,7 @@ export default function EmployeeFormModal({ open, employee, onClose, onSaved }: 
               <label className="block text-xs font-semibold text-foreground mb-1">Pagibig Rate (₱/month)</label>
               <input
                 type="number"
+                inputMode="decimal"
                 min={0}
                 step="0.01"
                 {...register('pagibigRate', { min: { value: 0, message: 'Must be 0 or more' } })}
@@ -196,6 +199,7 @@ export default function EmployeeFormModal({ open, employee, onClose, onSaved }: 
               <label className="block text-xs font-semibold text-foreground mb-1">HDMF Rate (₱/month)</label>
               <input
                 type="number"
+                inputMode="decimal"
                 min={0}
                 step="0.01"
                 {...register('hdmfRate', { min: { value: 0, message: 'Must be 0 or more' } })}

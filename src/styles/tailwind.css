@@ -72,6 +72,46 @@
   .scale-in {
     animation: scaleIn 150ms ease forwards;
   }
+  .modal-sheet {
+    animation: sheetUp 250ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+  @media (min-width: 640px) {
+    .modal-sheet {
+      animation: scaleIn 150ms ease forwards;
+    }
+  }
+  @media (max-width: 639px) {
+    .modal-sheet-body input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='hidden']),
+    .modal-sheet-body select {
+      min-height: 3rem;
+      font-size: 16px;
+      line-height: 1.25rem;
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+    }
+    .modal-sheet-body textarea {
+      min-height: 6rem;
+      font-size: 16px;
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+    }
+    .modal-sheet-body input[type='date'],
+    .modal-sheet-body input[type='month'] {
+      -webkit-appearance: none;
+      appearance: none;
+      display: block;
+    }
+    .modal-sheet-body button[type='submit'],
+    .modal-sheet-body form button {
+      min-height: 3rem;
+    }
+    .modal-sheet-body form > div:last-child {
+      position: sticky;
+      bottom: 0;
+      background-color: var(--card);
+      padding-bottom: 0.75rem;
+    }
+  }
   .pulse-highlight {
     animation: pulseHighlight 600ms ease;
   }
@@ -86,6 +126,50 @@
   @keyframes scaleIn {
     from { opacity: 0; transform: scale(0.96); }
     to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes sheetUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .modal-sheet {
+    animation: sheetUp 250ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+  @media (min-width: 640px) {
+    .modal-sheet {
+      animation: scaleIn 150ms ease forwards;
+    }
+  }
+  @media (max-width: 639px) {
+    .modal-sheet-body input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='hidden']),
+    .modal-sheet-body select {
+      min-height: 3rem;
+      font-size: 16px;
+      line-height: 1.25rem;
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+    }
+    .modal-sheet-body textarea {
+      min-height: 6rem;
+      font-size: 16px;
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+    }
+    .modal-sheet-body input[type='date'],
+    .modal-sheet-body input[type='month'] {
+      -webkit-appearance: none;
+      appearance: none;
+      display: block;
+    }
+    .modal-sheet-body button[type='submit'],
+    .modal-sheet-body form button {
+      min-height: 3rem;
+    }
+    .modal-sheet-body form > div:last-child {
+      position: sticky;
+      bottom: 0;
+      background-color: var(--card);
+      padding-bottom: 0.75rem;
+    }
   }
   @keyframes pulseHighlight {
     0% { background-color: transparent; }

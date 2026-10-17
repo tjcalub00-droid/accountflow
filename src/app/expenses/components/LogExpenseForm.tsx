@@ -291,6 +291,7 @@ export default function LogExpenseForm({ onClose, rules = [], editData }: Props)
           </label>
           <input
             type="number"
+            inputMode="decimal"
             step="0.01"
             min="0.01"
             {...register('amount', {
