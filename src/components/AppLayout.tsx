@@ -78,22 +78,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <Sidebar
           collapsed={false}
           onToggle={() => {
-            setPinned((v) => !v);
+            setPinned(false);
             setHovered(false);
           }}
           onMouseEnter={isMobile ? undefined : () => setHovered(true)}
-          onMouseLeave={isMobile ? undefined : () => setHovered(false)}
+          onMouseLeave={
+            isMobile
+              ? undefined
+              : () => {
+                  setHovered(false);
+                  setPinned(false);
+                }
+          }
           onNavClick={() => {
             setMobileOpen(false);
-            if (!pinned) setHovered(false);
+            setHovered(false);
+            setPinned(false);
           }}
         />
       </div>
 
       <main
-        className={`flex-1 min-h-screen content-transition ml-0 ${
-          !isMobile && pinned ? 'lg:ml-60' : ''
-        }`}
+        className="flex-1 min-h-screen content-transition ml-0"
       >
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6 pt-16 lg:pt-8">
           {children}
