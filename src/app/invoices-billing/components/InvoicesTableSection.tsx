@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Search, Plus, ChevronUp, ChevronDown, Send, CheckCircle, Eye, Trash2, FileText } from 'lucide-react';
+import { Search, Plus, ChevronUp, ChevronDown, Send, CheckCircle, Eye, Trash2, FileText, Pencil, History } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Modal from '@/components/ui/Modal';
 import CreateInvoiceForm from './CreateInvoiceForm';
@@ -28,6 +28,42 @@ interface Invoice {
 const statusFilters = ['All', 'Paid', 'Unpaid'];
 type SortKey = 'number' | 'customer' | 'issueDate' | 'dueDate' | 'total' | 'status';
 
+interface InvoiceChange {
+  field: string;
+  from: string;
+  to: string;
+}
+
+interface InvoiceLog {
+  id: string;
+  createdAt: string;
+  modifiedByName: string;
+  changes: InvoiceChange[];
+}
+
+interface EditForm {
+  customer: string;
+  email: string;
+  issueDate: string;
+  dueDate: string;
+  amount: string;
+  tax: string;
+  notes: string;
+}
+
+const formatLogTimestamp = (iso: string): string => {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+};
+
 const isPaidStatus = (s: InvoiceStatus) => s === 'paid';
 const statusLabel = (s: InvoiceStatus) => (isPaidStatus(s) ? 'Paid' : 'Unpaid');
 
@@ -45,7 +81,7 @@ function isSchemaError(error: any): boolean {
 }
 
 export default function InvoicesTableSection() {
-  const { getEffectiveOwnerId, isOwner, isAccountant } = useAuth();
+  const { getEffectiveOwnerId, isOwner, isAccountant, user, profile } = useAuth();
   const supabase = createClient();
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -60,6 +96,13 @@ export default function InvoicesTableSection() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<{ invoice: Invoice; value: 'paid' | 'unpaid' } | null>(null);
   const [companyName, setCompanyName] = useState('');
+  const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [editNotes, setEditNotes] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [logInvoice, setLogInvoice] = useState<Invoice | null>(null);
+  const [logs, setLogs] = useState<InvoiceLog[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
   const [page, setPage] = useState(1);
   const perPage = 10;
 
@@ -184,6 +227,143 @@ export default function InvoicesTableSection() {
       notifyChanged();
     } catch {
       toast.error('Error updating invoices');
+    }
+  };
+
+  const openEdit = async (inv: Invoice) => {
+    if (!canEdit) return;
+    setEditInvoice(inv);
+    setEditForm({
+      customer: inv.customer,
+      email: inv.email,
+      issueDate: inv.issueDate,
+      dueDate: inv.dueDate,
+      amount: String(inv.amount),
+      tax: String(inv.tax),
+      notes: '',
+    });
+    setEditNotes('');
+    try {
+      const { data } = await supabase.from('invoices').select('notes').eq('id', inv.id).maybeSingle();
+      const existingNotes = data?.notes ?? '';
+      setEditNotes(existingNotes);
+      setEditForm((prev) => (prev ? { ...prev, notes: existingNotes } : prev));
+    } catch {
+      // notes remain empty
+    }
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editInvoice || !editForm || !canEdit) return;
+
+    const customer = editForm.customer.trim();
+    const amount = Number(editForm.amount);
+    const tax = Number(editForm.tax);
+
+    if (customer.length < 2) { toast.error('Customer name is required'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email)) { toast.error('Enter a valid email address'); return; }
+    if (!editForm.issueDate || !editForm.dueDate) { toast.error('Issue and due dates are required'); return; }
+    if (editForm.dueDate < editForm.issueDate) { toast.error('Due date must be on or after the issue date'); return; }
+    if (!isFinite(amount) || amount <= 0) { toast.error('Subtotal must be greater than 0'); return; }
+    if (!isFinite(tax) || tax < 0) { toast.error('Tax cannot be negative'); return; }
+
+    const total = amount + tax;
+    const newNotes = editForm.notes.trim();
+
+    const changes: InvoiceChange[] = [];
+    const track = (field: string, from: string, to: string) => {
+      if (from !== to) changes.push({ field, from, to });
+    };
+    track('Customer', editInvoice.customer, customer);
+    track('Email', editInvoice.email, editForm.email.trim());
+    track('Issue Date', editInvoice.issueDate, editForm.issueDate);
+    track('Due Date', editInvoice.dueDate, editForm.dueDate);
+    track('Subtotal', editInvoice.amount.toFixed(2), amount.toFixed(2));
+    track('Tax', editInvoice.tax.toFixed(2), tax.toFixed(2));
+    track('Total', editInvoice.total.toFixed(2), total.toFixed(2));
+    track('Notes', editNotes.trim(), newNotes);
+
+    if (changes.length === 0) {
+      toast.info('No changes to save');
+      return;
+    }
+
+    const ownerId = effectiveOwnerId;
+    if (!ownerId || !user) { toast.error('Not authenticated'); return; }
+
+    setSavingEdit(true);
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          customer,
+          customer_email: editForm.email.trim(),
+          issue_date: editForm.issueDate,
+          due_date: editForm.dueDate,
+          amount,
+          tax,
+          total,
+          notes: newNotes || null,
+        })
+        .eq('id', editInvoice.id);
+      if (error) {
+        if (isSchemaError(error)) throw error;
+        toast.error(error.message || 'Failed to update invoice');
+        return;
+      }
+
+      const { error: logError } = await supabase.from('invoice_logs').insert({
+        invoice_id: editInvoice.id,
+        owner_id: ownerId,
+        modified_by: user.id,
+        modified_by_name: profile?.full_name || profile?.email || user.email || '',
+        changes,
+      });
+      if (logError) {
+        toast.warning(`Invoice saved, but the log entry failed: ${logError.message}`);
+      } else {
+        toast.success(`${editInvoice.number} updated`);
+      }
+
+      setEditInvoice(null);
+      setEditForm(null);
+      await fetchInvoices();
+      notifyChanged();
+    } catch (err: any) {
+      toast.error(err?.message || 'Error updating invoice');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const openLog = async (inv: Invoice) => {
+    setLogInvoice(inv);
+    setLogs([]);
+    setLoadingLogs(true);
+    try {
+      const { data, error } = await supabase
+        .from('invoice_logs')
+        .select('*')
+        .eq('invoice_id', inv.id)
+        .order('created_at', { ascending: false });
+      if (error) {
+        if (isSchemaError(error)) throw error;
+        toast.error(error.message || 'Failed to load invoice log');
+        return;
+      }
+      setLogs(
+        (data || []).map((row: any) => ({
+          id: row.id,
+          createdAt: row.created_at,
+          modifiedByName: row.modified_by_name ?? '',
+          changes: Array.isArray(row.changes) ? row.changes : [],
+        }))
+      );
+    } catch (err: any) {
+      toast.error(err?.message || 'Error loading invoice log');
+    } finally {
+      setLoadingLogs(false);
     }
   };
 
@@ -415,6 +595,14 @@ export default function InvoicesTableSection() {
                         <Eye size={13} />
                       </button>
                       {canEdit && (
+                        <button title="Edit" onClick={() => openEdit(inv)} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                          <Pencil size={13} />
+                        </button>
+                      )}
+                      <button title="Log" onClick={() => openLog(inv)} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                        <History size={13} />
+                      </button>
+                      {canEdit && (
                         <button title="Delete" onClick={() => handleDelete(inv.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-danger/10 hover:text-danger transition-colors">
                           <Trash2 size={13} />
                         </button>
@@ -515,6 +703,152 @@ export default function InvoicesTableSection() {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={!!editInvoice}
+        onClose={() => { if (!savingEdit) { setEditInvoice(null); setEditForm(null); } }}
+        title={editInvoice ? `Edit Invoice ${editInvoice.number}` : 'Edit Invoice'}
+      >
+        {editInvoice && editForm && (
+          <form onSubmit={handleSaveEdit} className="p-4 sm:p-6 space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Customer Name</label>
+                <input
+                  value={editForm.customer}
+                  onChange={(e) => setEditForm({ ...editForm, customer: e.target.value })}
+                  className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Billing Email</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Issue Date</label>
+                <input
+                  type="date"
+                  value={editForm.issueDate}
+                  onChange={(e) => setEditForm({ ...editForm, issueDate: e.target.value })}
+                  className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Due Date</label>
+                <input
+                  type="date"
+                  value={editForm.dueDate}
+                  onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
+                  className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Subtotal (PHP)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editForm.amount}
+                  onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                  className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring font-mono text-right"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Tax (PHP)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editForm.tax}
+                  onChange={(e) => setEditForm({ ...editForm, tax: e.target.value })}
+                  className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring font-mono text-right"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Notes</label>
+              <textarea
+                rows={3}
+                value={editForm.notes}
+                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+              />
+            </div>
+            <div className="flex justify-between text-base font-bold border-t border-border pt-3">
+              <span className="text-foreground">Total</span>
+              <span className="font-mono text-foreground">
+                ₱{((Number(editForm.amount) || 0) + (Number(editForm.tax) || 0)).toLocaleString()}
+              </span>
+            </div>
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-border">
+              <button
+                type="button"
+                disabled={savingEdit}
+                onClick={() => { setEditInvoice(null); setEditForm(null); }}
+                className="px-4 py-2 text-sm font-semibold text-muted-foreground border border-border rounded-lg hover:bg-muted transition-colors disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingEdit}
+                className="px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
+              >
+                {savingEdit ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!logInvoice}
+        onClose={() => setLogInvoice(null)}
+        title={logInvoice ? `Modification Log - ${logInvoice.number}` : 'Modification Log'}
+        size="lg"
+      >
+        <div className="p-4 sm:p-6">
+          {loadingLogs ? (
+            <div className="flex flex-col items-center gap-2 py-10">
+              <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+              <p className="text-sm text-muted-foreground">Loading log...</p>
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-10">
+              <History size={32} className="text-muted-foreground/40" />
+              <p className="text-sm font-semibold text-foreground">No modifications recorded</p>
+              <p className="text-xs text-muted-foreground">Changes saved through Edit will appear here.</p>
+            </div>
+          ) : (
+            <ul className="space-y-4">
+              {logs.map((log) => (
+                <li key={log.id} className="border border-border rounded-lg p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <p className="text-sm font-semibold text-foreground">{formatLogTimestamp(log.createdAt)}</p>
+                    {log.modifiedByName && (
+                      <p className="text-xs text-muted-foreground">by {log.modifiedByName}</p>
+                    )}
+                  </div>
+                  <ul className="space-y-1">
+                    {log.changes.map((c, idx) => (
+                      <li key={`${log.id}-${idx}`} className="text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">{c.field}:</span>{' '}
+                        <span className="line-through">{c.from || '—'}</span>{' → '}
+                        <span className="text-foreground">{c.to || '—'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </Modal>
 
       <Modal
