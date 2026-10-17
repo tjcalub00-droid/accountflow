@@ -10,6 +10,7 @@ interface UserProfile {
   role: 'owner' | 'accountant' | 'viewer';
   owner_id: string | null;
   is_active: boolean;
+  onboarding_completed?: boolean;
 }
 
 interface AuthContextValue {

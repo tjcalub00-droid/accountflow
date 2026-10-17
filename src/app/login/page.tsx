@@ -39,7 +39,7 @@ export default function LoginPage() {
         router.replace('/');
       } else {
         await signUp(email, password, { fullName, role: 'owner' });
-        router.replace('/');
+        router.replace('/onboarding');
       }
     } catch (err: any) {
       setError(err?.message || 'Authentication failed. Please try again.');

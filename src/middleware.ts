@@ -52,6 +52,29 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // First-login onboarding gate
+  if (user && !isPublicRoute) {
+    const { data: onboardingProfile } = await supabase
+      .from('user_profiles')
+      .select('onboarding_completed')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const needsOnboarding = onboardingProfile?.onboarding_completed === false;
+
+    if (needsOnboarding && !pathname.startsWith('/onboarding')) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/onboarding';
+      return NextResponse.redirect(url);
+    }
+
+    if (!needsOnboarding && pathname.startsWith('/onboarding')) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      return NextResponse.redirect(url);
+    }
+  }
+
   if (user && pathname === '/login') {
     const url = request.nextUrl.clone();
     url.pathname = '/';
