@@ -5,7 +5,8 @@ import { Plus, Pencil, Trash2, UserCheck, UserX } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import StatusBadge from '@/components/ui/StatusBadge';
-import EmployeeFormModal from './EmployeeFormModal';
+import dynamic from 'next/dynamic';
+const EmployeeFormModal = dynamic(() => import('./EmployeeFormModal'), { ssr: false });
 
 export interface Employee {
   id: string;

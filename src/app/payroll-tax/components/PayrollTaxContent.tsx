@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import PayrollSummaryCards from './PayrollSummaryCards';
 import PayrollTable from './PayrollTable';
-import RunPayrollModal from './RunPayrollModal';
+import dynamic from 'next/dynamic';
+const RunPayrollModal = dynamic(() => import('./RunPayrollModal'), { ssr: false });
 import { Play, Calendar } from 'lucide-react';
 
 export default function PayrollTaxContent() {

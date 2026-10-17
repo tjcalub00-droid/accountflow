@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import VoucherTemplateSection from './VoucherTemplateSection';
 import VoucherListTable from './VoucherListTable';
-import CreateVoucherModal from './CreateVoucherModal';
+import dynamic from 'next/dynamic';
+const CreateVoucherModal = dynamic(() => import('./CreateVoucherModal'), { ssr: false });
 import type { NewVoucher } from './CreateVoucherModal';
 import { Plus, X, FileText, CreditCard, Receipt, Wallet, Users } from 'lucide-react';
 
