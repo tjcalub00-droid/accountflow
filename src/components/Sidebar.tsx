@@ -67,7 +67,7 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
   const { profile, signOut, isOwner } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const [overviewOpen, setOverviewOpen] = useState(false);
-  const isMobileSidebar = !collapsed && typeof onMouseEnter === 'undefined';
+  const isMobileSidebar = typeof onMouseEnter === 'undefined';
 
   const handleSignOut = async () => {
     setSigningOut(true);
