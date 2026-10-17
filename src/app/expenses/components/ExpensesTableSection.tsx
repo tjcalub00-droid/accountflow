@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Search, Plus, ChevronUp, ChevronDown, Paperclip, Tag, Trash2, Edit2, Receipt, ExternalLink } from 'lucide-react';
+import { Search, Plus, ChevronUp, ChevronDown, Paperclip, Tag, Trash2, Edit2, Receipt, ExternalLink, RefreshCw } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Modal from '@/components/ui/Modal';
 import LogExpenseForm, { type ExpenseEditData } from './LogExpenseForm';
@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import ExportButtons from '@/components/ui/ExportButtons';
 
-type ExpenseStatus = 'approved' | 'pending' | 'rejected';
+type ExpenseStatus = 'approved' | 'pending' | 'rejected' | 'paid';
 
 interface Expense {
   id: string;
@@ -66,6 +66,9 @@ export default function ExpensesTableSection() {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [logOpen, setLogOpen] = useState(false);
   const [editExpense, setEditExpense] = useState<ExpenseEditData | null>(null);
+  const [statusExpense, setStatusExpense] = useState<Expense | null>(null);
+  const [newStatus, setNewStatus] = useState<ExpenseStatus>('pending');
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [page, setPage] = useState(1);
   const [rules, setRules] = useState<CategorizationRule[]>([]);
   const perPage = 10;
@@ -150,6 +153,30 @@ export default function ExpensesTableSection() {
       notes: exp.notes,
       receiptUrl: exp.receiptUrl,
     });
+  };
+
+  const handleOpenUpdate = (exp: Expense) => {
+    setStatusExpense(exp);
+    setNewStatus(exp.status);
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!canEdit || !statusExpense) return;
+    setUpdatingStatus(true);
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .update({ status: newStatus })
+        .eq('id', statusExpense.id);
+      if (error) { toast.error('Failed to update status'); return; }
+      toast.success(`Status updated to ${newStatus === 'paid' ? 'Paid' : newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`);
+      setStatusExpense(null);
+      fetchExpenses();
+    } catch {
+      toast.error('Error updating status');
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
 
   const getReceiptSignedUrl = async (path: string): Promise<string | null> => {
@@ -385,6 +412,13 @@ export default function ExpensesTableSection() {
                         {canEdit && (
                           <>
                             <button
+                              title="Update status"
+                              onClick={() => handleOpenUpdate(exp)}
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                            >
+                              <RefreshCw size={13} />
+                            </button>
+                            <button
                               title="Edit"
                               onClick={() => handleEdit(exp)}
                               className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -434,6 +468,48 @@ export default function ExpensesTableSection() {
               rules={rules}
               editData={editExpense}
             />
+          )}
+        </Modal>
+
+        {/* Update status modal */}
+        <Modal open={!!statusExpense} onClose={() => setStatusExpense(null)} title="Update Expense" size="sm">
+          {statusExpense && (
+            <div className="p-6 space-y-4">
+              <div className="space-y-1.5 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Vendor</span><span className="font-medium text-foreground">{statusExpense.vendor}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Category</span><span className="font-medium text-foreground">{statusExpense.category}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Date</span><span className="font-mono text-xs text-foreground">{statusExpense.date}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-mono font-semibold text-foreground">₱{statusExpense.amount.toLocaleString()}</span></div>
+                <div className="flex justify-between items-center"><span className="text-muted-foreground">Current Status</span><StatusBadge status={statusExpense.status} /></div>
+              </div>
+              <div>
+                <label htmlFor="expense-status-select" className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">Change Status</label>
+                <select
+                  id="expense-status-select"
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value as ExpenseStatus)}
+                  className="w-full px-3 py-2 text-sm bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="paid">Paid</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  onClick={() => setStatusExpense(null)}
+                  className="px-4 py-2 text-sm font-medium border border-border rounded-lg hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateStatus}
+                  disabled={updatingStatus || newStatus === statusExpense.status}
+                  className="px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-all"
+                >
+                  {updatingStatus ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
           )}
         </Modal>
       </div>

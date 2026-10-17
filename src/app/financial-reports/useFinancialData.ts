@@ -174,7 +174,7 @@ function computePL(
   const opex = { salaries: 0, software: 0, marketing: 0, office: 0, travel: 0, insurance: 0, professional: 0 };
 
   expenses
-    .filter((e) => e.status === 'approved' && inRange(e.expense_date, range))
+    .filter((e) => ['approved', 'paid'].includes(e.status) && inRange(e.expense_date, range))
     .forEach((e) => {
       const key = mapExpenseCategory(e.category);
       if (COGS_KEYS.includes(key)) {
@@ -213,7 +213,7 @@ function computeCashAsOf(
     .filter((i) => i.status === 'paid' && upTo(i.issue_date, end))
     .reduce((s, i) => s + num(i.total), 0);
   const outExp = expenses
-    .filter((e) => e.status === 'approved' && upTo(e.expense_date, end))
+    .filter((e) => ['approved', 'paid'].includes(e.status) && upTo(e.expense_date, end))
     .reduce((s, e) => s + num(e.amount), 0);
   const outPay = payroll
     .filter((p) => p.status === 'paid' && upTo(p.pay_date, end))
