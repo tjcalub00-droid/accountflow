@@ -1,39 +1,45 @@
 'use client';
 import React from 'react';
 import dynamic from 'next/dynamic';
+import type { FinancialData } from '../useFinancialData';
 
 const CashFlowChart = dynamic(() => import('./charts/CashFlowChart'), {
   ssr: false,
   loading: () => <div className="animate-pulse bg-muted rounded-xl h-56 w-full" />,
 });
 
-interface Props { period: string; compare: boolean; }
+interface Props { period: string; compare: boolean; data: FinancialData; }
 
-const cfData = {
-  operating: [
-    { id: 'cfo-ni', label: 'Net Income', current: 0, prior: 0 },
-    { id: 'cfo-dep', label: 'Depreciation & Amortization', current: 0, prior: 0 },
-    { id: 'cfo-ar', label: 'Decrease (Increase) in AR', current: 0, prior: 0 },
-    { id: 'cfo-ap', label: 'Increase (Decrease) in AP', current: 0, prior: 0 },
-    { id: 'cfo-accrued', label: 'Change in Accrued Expenses', current: 0, prior: 0 },
-    { id: 'cfo-deferred', label: 'Change in Deferred Revenue', current: 0, prior: 0 },
-  ],
-  investing: [
-    { id: 'cfi-equip', label: 'Purchase of Equipment', current: 0, prior: 0 },
-    { id: 'cfi-software', label: 'Capitalized Software Development', current: 0, prior: 0 },
-  ],
-  financing: [
-    { id: 'cff-draw', label: "Owner\'s Draw", current: 0, prior: 0 },
-    { id: 'cff-loan', label: 'Repayment of Line of Credit', current: 0, prior: 0 },
-  ],
-};
-
-function formatUSD(n: number) {
-  if (n < 0) return `(₱${Math.abs(n).toLocaleString()})`;
-  return `₱${n.toLocaleString()}`;
+function buildCfData(data: FinancialData) {
+  const c = data.current.cf;
+  const p = data.prior.cf;
+  return {
+    operating: [
+      { id: 'cfo-ni', label: 'Net Income', current: c.netIncome, prior: p.netIncome },
+      { id: 'cfo-dep', label: 'Depreciation & Amortization', current: c.depreciation, prior: p.depreciation },
+      { id: 'cfo-ar', label: 'Decrease (Increase) in AR', current: c.arChange, prior: p.arChange },
+      { id: 'cfo-ap', label: 'Increase (Decrease) in AP', current: c.apChange, prior: p.apChange },
+      { id: 'cfo-accrued', label: 'Change in Accrued Expenses', current: c.accruedChange, prior: p.accruedChange },
+      { id: 'cfo-deferred', label: 'Change in Deferred Revenue', current: c.deferredChange, prior: p.deferredChange },
+    ],
+    investing: [
+      { id: 'cfi-equip', label: 'Purchase of Equipment', current: c.equipment, prior: p.equipment },
+      { id: 'cfi-software', label: 'Capitalized Software Development', current: c.software, prior: p.software },
+    ],
+    financing: [
+      { id: 'cff-draw', label: "Owner's Draw", current: c.ownerDraw, prior: p.ownerDraw },
+      { id: 'cff-loan', label: 'Repayment of Line of Credit', current: c.loanRepayment, prior: p.loanRepayment },
+    ],
+  };
 }
 
-export default function CashFlowReport({ period, compare }: Props) {
+function formatUSD(n: number) {
+  if (n < 0) return `(₱${Math.abs(n).toLocaleString('en-US')})`;
+  return `₱${n.toLocaleString('en-US')}`;
+}
+
+export default function CashFlowReport({ period, compare, data }: Props) {
+  const cfData = buildCfData(data);
   const totalOperating = cfData.operating.reduce((s, r) => s + r.current, 0);
   const totalOperatingPrior = cfData.operating.reduce((s, r) => s + r.prior, 0);
   const totalInvesting = cfData.investing.reduce((s, r) => s + r.current, 0);
@@ -42,8 +48,10 @@ export default function CashFlowReport({ period, compare }: Props) {
   const totalFinancingPrior = cfData.financing.reduce((s, r) => s + r.prior, 0);
   const netChange = totalOperating + totalInvesting + totalFinancing;
   const netChangePrior = totalOperatingPrior + totalInvestingPrior + totalFinancingPrior;
-  const endingCash = 0;
-  const beginningCash = endingCash - netChange;
+  const endingCash = data.current.cf.endingCash;
+  const beginningCash = data.current.cf.beginningCash;
+  const endingCashPrior = data.prior.cf.endingCash;
+  const beginningCashPrior = data.prior.cf.beginningCash;
 
   return (
     <div className="space-y-4">
@@ -64,7 +72,7 @@ export default function CashFlowReport({ period, compare }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-1 bg-card border border-border rounded-xl p-5 shadow-sm">
           <h3 className="text-sm font-semibold text-foreground mb-4">Monthly Cash Flow</h3>
-          <CashFlowChart />
+          <CashFlowChart data={data.monthly} />
         </div>
 
         <div className="lg:col-span-2 bg-card border border-border rounded-xl shadow-sm overflow-hidden">
@@ -119,12 +127,12 @@ export default function CashFlowReport({ period, compare }: Props) {
               <tr className="bg-muted/30">
                 <td className="px-5 py-2.5 text-sm text-foreground">Beginning Cash Balance</td>
                 <td className="px-5 py-2.5 text-right font-mono text-sm text-foreground">{formatUSD(beginningCash)}</td>
-                {compare && <td className="px-5 py-2.5 text-right font-mono text-sm text-muted-foreground">—</td>}
+                {compare && <td className="px-5 py-2.5 text-right font-mono text-sm text-muted-foreground">{formatUSD(beginningCashPrior)}</td>}
               </tr>
               <tr className="bg-success/5">
                 <td className="px-5 py-3 text-sm font-bold text-foreground">ENDING CASH BALANCE</td>
                 <td className="px-5 py-3 text-right font-mono text-sm font-bold text-success">{formatUSD(endingCash)}</td>
-                {compare && <td className="px-5 py-3 text-right font-mono text-sm font-semibold text-muted-foreground">—</td>}
+                {compare && <td className="px-5 py-3 text-right font-mono text-sm font-semibold text-muted-foreground">{formatUSD(endingCashPrior)}</td>}
               </tr>
             </tbody>
           </table>

@@ -10,14 +10,10 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-const data = [
-  { month: 'Apr', cashFlow: 0 },
-  { month: 'May', cashFlow: 0 },
-  { month: 'Jun', cashFlow: 0 },
-  { month: 'Jul', cashFlow: 0 },
-  { month: 'Aug', cashFlow: 0 },
-  { month: 'Sep', cashFlow: 0 },
-];
+interface CFPoint {
+  month: string;
+  cashFlow: number;
+}
 
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
@@ -26,13 +22,13 @@ function CustomTooltip({ active, payload, label }: any) {
     <div className="bg-card border border-border rounded-xl px-4 py-3 shadow-lg">
       <p className="text-xs font-semibold text-muted-foreground mb-1">{label}</p>
       <p className={`text-sm font-bold font-mono ${v < 0 ? 'text-danger' : 'text-success'}`}>
-        {v < 0 ? `($${Math.abs(v).toLocaleString()})` : `$${v.toLocaleString()}`}
+        {v < 0 ? `(₱${Math.abs(v).toLocaleString('en-US')})` : `₱${v.toLocaleString('en-US')}`}
       </p>
     </div>
   );
 }
 
-export default function CashFlowChart() {
+export default function CashFlowChart({ data = [] }: { data?: CFPoint[] }) {
   return (
     <ResponsiveContainer width="100%" height={220}>
       <LineChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
@@ -42,7 +38,7 @@ export default function CashFlowChart() {
           tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
           axisLine={false}
           tickLine={false}
-          tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+          tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`}
         />
         <Tooltip content={<CustomTooltip />} />
         <Line

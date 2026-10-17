@@ -7,6 +7,7 @@ import ProfitLossReport from './ProfitLossReport';
 import BalanceSheetReport from './BalanceSheetReport';
 import CashFlowReport from './CashFlowReport';
 import { exportToCsv } from '@/lib/exportUtils';
+import { useFinancialData, type FinancialData } from '../useFinancialData';
 
 const tabs = [
   { id: 'pl', label: 'Profit & Loss' },
@@ -70,11 +71,59 @@ const reportStructures: Record<string, { section: string; accounts: string[] }[]
   ],
 };
 
-function getReportCsvRows(reportId: string): CsvRow[] {
+function getReportCsvRows(reportId: string, data: FinancialData | null): CsvRow[] {
+  const c = data?.current;
+  const p = data?.prior;
+  const values: Record<string, [number, number]> = {
+    'Consulting Services': [c?.pl.revenue.consulting ?? 0, p?.pl.revenue.consulting ?? 0],
+    'Retainer Contracts': [c?.pl.revenue.retainer ?? 0, p?.pl.revenue.retainer ?? 0],
+    'Project-Based Work': [c?.pl.revenue.project ?? 0, p?.pl.revenue.project ?? 0],
+    'Other Income': [c?.pl.revenue.other ?? 0, p?.pl.revenue.other ?? 0],
+    'Subcontractor Fees': [c?.pl.cogs.contractors ?? 0, p?.pl.cogs.contractors ?? 0],
+    'Project Tools & Licenses': [c?.pl.cogs.tools ?? 0, p?.pl.cogs.tools ?? 0],
+    'Owner Draw / Salary': [c?.pl.opex.salaries ?? 0, p?.pl.opex.salaries ?? 0],
+    'Software Subscriptions': [c?.pl.opex.software ?? 0, p?.pl.opex.software ?? 0],
+    'Marketing & Advertising': [c?.pl.opex.marketing ?? 0, p?.pl.opex.marketing ?? 0],
+    'Office & Administrative': [c?.pl.opex.office ?? 0, p?.pl.opex.office ?? 0],
+    'Travel & Entertainment': [c?.pl.opex.travel ?? 0, p?.pl.opex.travel ?? 0],
+    'Business Insurance': [c?.pl.opex.insurance ?? 0, p?.pl.opex.insurance ?? 0],
+    'Professional Services': [c?.pl.opex.professional ?? 0, p?.pl.opex.professional ?? 0],
+  };
+  const bsValues: Record<string, [number, number]> = {
+    'Cash & Cash Equivalents': [c?.bs.cash ?? 0, p?.bs.cash ?? 0],
+    'Accounts Receivable': [c?.bs.ar ?? 0, p?.bs.ar ?? 0],
+    'Prepaid Expenses': [c?.bs.prepaid ?? 0, p?.bs.prepaid ?? 0],
+    'Other Current Assets': [c?.bs.otherCurrent ?? 0, p?.bs.otherCurrent ?? 0],
+    'Computer Equipment': [c?.bs.equipment ?? 0, p?.bs.equipment ?? 0],
+    'Office Furniture': [c?.bs.furniture ?? 0, p?.bs.furniture ?? 0],
+    'Capitalized Software': [c?.bs.software ?? 0, p?.bs.software ?? 0],
+    'Accounts Payable': [c?.bs.ap ?? 0, p?.bs.ap ?? 0],
+    'Accrued Expenses': [c?.bs.accrued ?? 0, p?.bs.accrued ?? 0],
+    'Tax Payable (Current)': [c?.bs.taxPayable ?? 0, p?.bs.taxPayable ?? 0],
+    'Deferred Revenue': [c?.bs.deferred ?? 0, p?.bs.deferred ?? 0],
+    'Business Line of Credit': [c?.bs.loan ?? 0, p?.bs.loan ?? 0],
+    "Owner's Capital": [c?.bs.capital ?? 0, p?.bs.capital ?? 0],
+    'Retained Earnings': [c?.bs.retained ?? 0, p?.bs.retained ?? 0],
+  };
+  const cfValues: Record<string, [number, number]> = {
+    'Net Income': [c?.cf.netIncome ?? 0, p?.cf.netIncome ?? 0],
+    'Depreciation & Amortization': [c?.cf.depreciation ?? 0, p?.cf.depreciation ?? 0],
+    'Decrease (Increase) in AR': [c?.cf.arChange ?? 0, p?.cf.arChange ?? 0],
+    'Increase (Decrease) in AP': [c?.cf.apChange ?? 0, p?.cf.apChange ?? 0],
+    'Change in Accrued Expenses': [c?.cf.accruedChange ?? 0, p?.cf.accruedChange ?? 0],
+    'Change in Deferred Revenue': [c?.cf.deferredChange ?? 0, p?.cf.deferredChange ?? 0],
+    'Purchase of Equipment': [c?.cf.equipment ?? 0, p?.cf.equipment ?? 0],
+    'Capitalized Software Development': [c?.cf.software ?? 0, p?.cf.software ?? 0],
+    "Owner's Draw": [c?.cf.ownerDraw ?? 0, p?.cf.ownerDraw ?? 0],
+    'Repayment of Line of Credit': [c?.cf.loanRepayment ?? 0, p?.cf.loanRepayment ?? 0],
+  };
+  const lookup = reportId === 'pl' ? values : reportId === 'bs' ? bsValues : cfValues;
+
   const rows: CsvRow[] = [];
   (reportStructures[reportId] ?? []).forEach((sec) => {
     sec.accounts.forEach((account) => {
-      rows.push({ section: sec.section, account, current: 0, prior: 0 });
+      const [current, prior] = lookup[account] ?? [0, 0];
+      rows.push({ section: sec.section, account, current, prior });
     });
   });
   return rows;
@@ -176,6 +225,7 @@ export default function FinancialReportsContent() {
   const [compare, setCompare] = useState(true);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const { profile, user } = useAuth();
+  const { data, loading, error, reload } = useFinancialData(period);
 
   const reportLabel = tabs.find((t) => t.id === activeTab)?.label ?? '';
   const periodLabel = periods.find((p) => p.value === period)?.label ?? period;
@@ -271,7 +321,7 @@ export default function FinancialReportsContent() {
   };
 
   const handleExportCsv = () => {
-    const rows = getReportCsvRows(activeTab);
+    const rows = getReportCsvRows(activeTab, data);
     exportToCsv(
       `${reportLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${period}`,
       [
@@ -332,10 +382,13 @@ export default function FinancialReportsContent() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => toast?.info('Refreshing report data...')}
+            onClick={async () => {
+              await reload();
+              toast?.success('Report data refreshed');
+            }}
             className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground border border-border rounded-lg hover:bg-muted transition-colors"
           >
-            <RefreshCw size={14} />
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             Refresh
           </button>
           <button
@@ -357,9 +410,15 @@ export default function FinancialReportsContent() {
 
       {/* Report content */}
       <div id="report-print-area">
-        {activeTab === 'pl' && <ProfitLossReport period={period} compare={compare} />}
-        {activeTab === 'bs' && <BalanceSheetReport period={period} compare={compare} />}
-        {activeTab === 'cf' && <CashFlowReport period={period} compare={compare} />}
+        {error && (
+          <div className="bg-danger/10 border border-danger/30 text-danger text-sm rounded-xl px-4 py-3 mb-4">
+            {error}
+          </div>
+        )}
+        {!data && loading && <div className="animate-pulse bg-muted rounded-xl h-96 w-full" />}
+        {data && activeTab === 'pl' && <ProfitLossReport period={period} compare={compare} data={data} />}
+        {data && activeTab === 'bs' && <BalanceSheetReport period={period} compare={compare} data={data} />}
+        {data && activeTab === 'cf' && <CashFlowReport period={period} compare={compare} data={data} />}
       </div>
     </div>
   );

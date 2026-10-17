@@ -1,36 +1,44 @@
 'use client';
 import React from 'react';
+import type { FinancialData } from '../useFinancialData';
 
-interface Props { period: string; compare: boolean; }
+interface Props { period: string; compare: boolean; data: FinancialData; }
 
-const bsData = {
-  currentAssets: [
-    { id: 'ca-cash', label: 'Cash & Cash Equivalents', current: 0, prior: 0 },
-    { id: 'ca-ar', label: 'Accounts Receivable', current: 0, prior: 0 },
-    { id: 'ca-prepaid', label: 'Prepaid Expenses', current: 0, prior: 0 },
-    { id: 'ca-other', label: 'Other Current Assets', current: 0, prior: 0 },
-  ],
-  fixedAssets: [
-    { id: 'fa-equipment', label: 'Computer Equipment', current: 0, prior: 0 },
-    { id: 'fa-furniture', label: 'Office Furniture', current: 0, prior: 0 },
-    { id: 'fa-software', label: 'Capitalized Software', current: 0, prior: 0 },
-  ],
-  currentLiabilities: [
-    { id: 'cl-ap', label: 'Accounts Payable', current: 0, prior: 0 },
-    { id: 'cl-accrued', label: 'Accrued Expenses', current: 0, prior: 0 },
-    { id: 'cl-tax', label: 'Tax Payable (Current)', current: 0, prior: 0 },
-    { id: 'cl-deferred', label: 'Deferred Revenue', current: 0, prior: 0 },
-  ],
-  longTermLiabilities: [
-    { id: 'll-loan', label: 'Business Line of Credit', current: 0, prior: 0 },
-  ],
-  equity: [
-    { id: 'eq-capital', label: "Owner\'s Capital", current: 0, prior: 0 },
-    { id: 'eq-retained', label: 'Retained Earnings', current: 0, prior: 0 },
-  ],
-};
+function buildBsData(data: FinancialData) {
+  const c = data.current.bs;
+  const p = data.prior.bs;
+  return {
+    currentAssets: [
+      { id: 'ca-cash', label: 'Cash & Cash Equivalents', current: c.cash, prior: p.cash },
+      { id: 'ca-ar', label: 'Accounts Receivable', current: c.ar, prior: p.ar },
+      { id: 'ca-prepaid', label: 'Prepaid Expenses', current: c.prepaid, prior: p.prepaid },
+      { id: 'ca-other', label: 'Other Current Assets', current: c.otherCurrent, prior: p.otherCurrent },
+    ],
+    fixedAssets: [
+      { id: 'fa-equipment', label: 'Computer Equipment', current: c.equipment, prior: p.equipment },
+      { id: 'fa-furniture', label: 'Office Furniture', current: c.furniture, prior: p.furniture },
+      { id: 'fa-software', label: 'Capitalized Software', current: c.software, prior: p.software },
+    ],
+    currentLiabilities: [
+      { id: 'cl-ap', label: 'Accounts Payable', current: c.ap, prior: p.ap },
+      { id: 'cl-accrued', label: 'Accrued Expenses', current: c.accrued, prior: p.accrued },
+      { id: 'cl-tax', label: 'Tax Payable (Current)', current: c.taxPayable, prior: p.taxPayable },
+      { id: 'cl-deferred', label: 'Deferred Revenue', current: c.deferred, prior: p.deferred },
+    ],
+    longTermLiabilities: [
+      { id: 'll-loan', label: 'Business Line of Credit', current: c.loan, prior: p.loan },
+    ],
+    equity: [
+      { id: 'eq-capital', label: "Owner's Capital", current: c.capital, prior: p.capital },
+      { id: 'eq-retained', label: 'Retained Earnings', current: c.retained, prior: p.retained },
+    ],
+  };
+}
 
-function formatUSD(n: number) { return `₱${n.toLocaleString()}`; }
+function formatUSD(n: number) {
+  if (n < 0) return `(₱${Math.abs(n).toLocaleString('en-US')})`;
+  return `₱${n.toLocaleString('en-US')}`;
+}
 
 function Section({ title, rows, compare, totalLabel }: {
   title: string;
@@ -63,7 +71,8 @@ function Section({ title, rows, compare, totalLabel }: {
   );
 }
 
-export default function BalanceSheetReport({ period, compare }: Props) {
+export default function BalanceSheetReport({ period, compare, data }: Props) {
+  const bsData = buildBsData(data);
   const totalCurrentAssets = bsData.currentAssets.reduce((s, r) => s + r.current, 0);
   const totalFixedAssets = bsData.fixedAssets.reduce((s, r) => s + r.current, 0);
   const totalAssets = totalCurrentAssets + totalFixedAssets;

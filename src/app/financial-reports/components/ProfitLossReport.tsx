@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import dynamic from 'next/dynamic';
+import type { FinancialData } from '../useFinancialData';
 
 const PLChart = dynamic(() => import('./charts/PLChart'), {
   ssr: false,
@@ -10,32 +11,37 @@ const PLChart = dynamic(() => import('./charts/PLChart'), {
 interface Props {
   period: string;
   compare: boolean;
+  data: FinancialData;
 }
 
-const plData = {
-  revenue: [
-    { id: 'rev-consulting', label: 'Consulting Services', current: 0, prior: 0 },
-    { id: 'rev-retainer', label: 'Retainer Contracts', current: 0, prior: 0 },
-    { id: 'rev-project', label: 'Project-Based Work', current: 0, prior: 0 },
-    { id: 'rev-other', label: 'Other Income', current: 0, prior: 0 },
-  ],
-  cogs: [
-    { id: 'cogs-contractors', label: 'Subcontractor Fees', current: 0, prior: 0 },
-    { id: 'cogs-tools', label: 'Project Tools & Licenses', current: 0, prior: 0 },
-  ],
-  opex: [
-    { id: 'opex-salaries', label: 'Owner Draw / Salary', current: 0, prior: 0 },
-    { id: 'opex-software', label: 'Software Subscriptions', current: 0, prior: 0 },
-    { id: 'opex-marketing', label: 'Marketing & Advertising', current: 0, prior: 0 },
-    { id: 'opex-office', label: 'Office & Administrative', current: 0, prior: 0 },
-    { id: 'opex-travel', label: 'Travel & Entertainment', current: 0, prior: 0 },
-    { id: 'opex-insurance', label: 'Business Insurance', current: 0, prior: 0 },
-    { id: 'opex-professional', label: 'Professional Services', current: 0, prior: 0 },
-  ],
-};
+function buildPlData(data: FinancialData) {
+  const c = data.current.pl;
+  const p = data.prior.pl;
+  return {
+    revenue: [
+      { id: 'rev-consulting', label: 'Consulting Services', current: c.revenue.consulting, prior: p.revenue.consulting },
+      { id: 'rev-retainer', label: 'Retainer Contracts', current: c.revenue.retainer, prior: p.revenue.retainer },
+      { id: 'rev-project', label: 'Project-Based Work', current: c.revenue.project, prior: p.revenue.project },
+      { id: 'rev-other', label: 'Other Income', current: c.revenue.other, prior: p.revenue.other },
+    ],
+    cogs: [
+      { id: 'cogs-contractors', label: 'Subcontractor Fees', current: c.cogs.contractors, prior: p.cogs.contractors },
+      { id: 'cogs-tools', label: 'Project Tools & Licenses', current: c.cogs.tools, prior: p.cogs.tools },
+    ],
+    opex: [
+      { id: 'opex-salaries', label: 'Owner Draw / Salary', current: c.opex.salaries, prior: p.opex.salaries },
+      { id: 'opex-software', label: 'Software Subscriptions', current: c.opex.software, prior: p.opex.software },
+      { id: 'opex-marketing', label: 'Marketing & Advertising', current: c.opex.marketing, prior: p.opex.marketing },
+      { id: 'opex-office', label: 'Office & Administrative', current: c.opex.office, prior: p.opex.office },
+      { id: 'opex-travel', label: 'Travel & Entertainment', current: c.opex.travel, prior: p.opex.travel },
+      { id: 'opex-insurance', label: 'Business Insurance', current: c.opex.insurance, prior: p.opex.insurance },
+      { id: 'opex-professional', label: 'Professional Services', current: c.opex.professional, prior: p.opex.professional },
+    ],
+  };
+}
 
 function formatUSD(n: number) {
-  return `₱${n.toLocaleString()}`;
+  return `₱${n.toLocaleString('en-US')}`;
 }
 
 function formatChange(current: number, prior: number) {
@@ -88,7 +94,8 @@ function ReportRow({ id, label, current, prior, compare, bold, indent, highlight
   );
 }
 
-export default function ProfitLossReport({ period, compare }: Props) {
+export default function ProfitLossReport({ period, compare, data }: Props) {
+  const plData = buildPlData(data);
   const totalRevenue = plData.revenue.reduce((s, r) => s + r.current, 0);
   const totalRevenuePrior = plData.revenue.reduce((s, r) => s + r.prior, 0);
   const totalCOGS = plData.cogs.reduce((s, r) => s + r.current, 0);
@@ -124,7 +131,7 @@ export default function ProfitLossReport({ period, compare }: Props) {
         {/* Chart */}
         <div className="lg:col-span-1 bg-card border border-border rounded-xl p-5 shadow-sm">
           <h3 className="text-sm font-semibold text-foreground mb-4">Monthly Trend</h3>
-          <PLChart />
+          <PLChart data={data.monthly} />
         </div>
 
         {/* Table */}
