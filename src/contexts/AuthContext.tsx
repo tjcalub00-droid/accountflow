@@ -24,6 +24,7 @@ interface AuthContextValue {
   getCurrentUser: () => Promise<any>;
   isEmailVerified: () => boolean;
   getUserProfile: () => Promise<UserProfile | null>;
+  refreshProfile: () => Promise<UserProfile | null>;
   isOwner: () => boolean;
   isAccountant: () => boolean;
   canManagePayroll: () => boolean;
@@ -126,11 +127,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return user;
   };
 
-  const isEmailVerified = () => user?.email_confirmed_at !== null;
+  const isEmailVerified = () => !!user?.email_confirmed_at;
 
   const getUserProfile = async (): Promise<UserProfile | null> => {
     if (!user) return null;
     return fetchProfile(user.id);
+  };
+
+  const refreshProfile = async (): Promise<UserProfile | null> => {
+    const {
+      data: { session: currentSession },
+    } = await supabase.auth.getSession();
+    if (!currentSession?.user) {
+      setProfile(null);
+      return null;
+    }
+    const p = await fetchProfile(currentSession.user.id);
+    setProfile(p);
+    return p;
   };
 
   const isOwner = () => profile?.role === 'owner';
@@ -154,6 +168,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     getCurrentUser,
     isEmailVerified,
     getUserProfile,
+    refreshProfile,
     isOwner,
     isAccountant,
     canManagePayroll,

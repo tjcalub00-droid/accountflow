@@ -1,12 +1,51 @@
-import React from 'react';
+'use client';
+import React, { useEffect, useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import DashboardAlertBanner from './components/DashboardAlertBanner';
 import DashboardBentoGrid from './components/DashboardBentoGrid';
 import DashboardChartsRow from './components/DashboardChartsRow';
 import DashboardActivityFeed from './components/DashboardActivityFeed';
 import PageActions from '@/components/ui/PageActions';
+import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 export default function DashboardPage() {
+  const { profile, loading: authLoading, getEffectiveOwnerId } = useAuth();
+  const [companyName, setCompanyName] = useState('');
+  const [lastUpdated, setLastUpdated] = useState('');
+  const [fiscalYear, setFiscalYear] = useState('');
+
+  useEffect(() => {
+    if (authLoading || !profile) return;
+    const ownerId = getEffectiveOwnerId();
+    if (!ownerId) return;
+    const supabase = createClient();
+    supabase
+      .from('company_settings')
+      .select('company_name')
+      .eq('owner_id', ownerId)
+      .maybeSingle()
+      .then(({ data }) => {
+        setCompanyName(data?.company_name || '');
+      });
+  }, [authLoading, profile]);
+
+  useEffect(() => {
+    const now = new Date();
+    setFiscalYear(String(now.getFullYear()));
+    setLastUpdated(
+      now.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    );
+  }, []);
+
+  const displayName = companyName || profile?.full_name || 'Your Business';
+
   return (
     <AppLayout>
       <div className="space-y-6 fade-in">
@@ -15,13 +54,14 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-foreground">Financial Overview</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Reynolds Consulting LLC · Fiscal Year 2026
+              {displayName}
+              {fiscalYear ? ` · Fiscal Year ${fiscalYear}` : ''}
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">Last updated:</span>
-              <span className="text-xs font-mono font-medium text-foreground">Sep 14, 2026 · 12:03 AM</span>
+              <span className="text-xs font-mono font-medium text-foreground">{lastUpdated}</span>
               <span className="w-2 h-2 rounded-full bg-success inline-block" title="Live data" />
             </div>
             <PageActions pageName="Financial Overview" />

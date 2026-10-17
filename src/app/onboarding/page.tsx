@@ -34,7 +34,7 @@ const labelClass =
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const supabase = createClient();
 
   const [step, setStep] = useState(1);
@@ -136,7 +136,8 @@ export default function OnboardingPage() {
         .eq('id', user.id);
       if (profError) throw profError;
 
-      // Full reload so auth context and middleware pick up the new state
+      // Sync the in-memory profile, then do a full reload so middleware picks up the new state
+      await refreshProfile();
       window.location.href = '/';
     } catch (err: any) {
       setError(err?.message || 'Could not complete setup. Please try again.');

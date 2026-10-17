@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 import Image from 'next/image';
 import { Eye, EyeOff, LogIn, UserPlus, AlertCircle } from 'lucide-react';
@@ -10,8 +10,8 @@ import { Eye, EyeOff, LogIn, UserPlus, AlertCircle } from 'lucide-react';
 type Mode = 'login' | 'register';
 
 export default function LoginPage() {
-  const router = useRouter();
   const { signIn, signUp } = useAuth();
+  const supabase = createClient();
 
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
@@ -35,11 +35,26 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (mode === 'login') {
-        await signIn(email, password);
-        router.replace('/');
+        const data = await signIn(email, password);
+        let target = '/';
+        if (data?.user?.id) {
+          const { data: prof } = await supabase
+            .from('user_profiles')
+            .select('onboarding_completed')
+            .eq('id', data.user.id)
+            .maybeSingle();
+          if (prof?.onboarding_completed === false) target = '/onboarding';
+        }
+        // Full navigation so middleware sees the freshly stored session cookie
+        window.location.href = target;
       } else {
-        await signUp(email, password, { fullName, role: 'owner' });
-        router.replace('/onboarding');
+        const data = await signUp(email, password, { fullName, role: 'owner' });
+        if (data?.session) {
+          window.location.href = '/onboarding';
+        } else {
+          setMode('login');
+          setError('Account created. Please sign in to continue setup.');
+        }
       }
     } catch (err: any) {
       setError(err?.message || 'Authentication failed. Please try again.');
