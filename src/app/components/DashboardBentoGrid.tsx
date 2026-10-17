@@ -24,12 +24,14 @@ export default function DashboardBentoGrid() {
     const ownerId = getEffectiveOwnerId();
     if (!ownerId) return;
     const supabase = createClient();
+    let cancelled = false;
 
     const load = async () => {
       const [inv, exp] = await Promise.all([
         supabase.from('invoices').select('total').eq('owner_id', ownerId).eq('status', 'paid'),
         supabase.from('expenses').select('amount').eq('owner_id', ownerId).eq('status', 'pending'),
       ]);
+      if (cancelled) return;
       const paidRows = inv.data ?? [];
       const pendingRows = exp.data ?? [];
       setAccountsReceivable(paidRows.reduce((s, r) => s + (Number(r.total) || 0), 0));
@@ -38,6 +40,25 @@ export default function DashboardBentoGrid() {
       setUnpaidBillCount(pendingRows.length);
     };
     load();
+
+    const channel = supabase
+      .channel(`dashboard-kpis-${ownerId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'invoices', filter: `owner_id=eq.${ownerId}` },
+        () => load()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'expenses', filter: `owner_id=eq.${ownerId}` },
+        () => load()
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
   }, [authLoading, profile]);
 
   const monthlyRevenue = accountsReceivable - accountsPayable;

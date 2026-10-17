@@ -151,8 +151,21 @@ export default function DashboardActivityFeed() {
     };
 
     load();
+
+    const tables = ['invoices', 'expenses', 'payroll_runs', 'vouchers', 'receipts', 'employees', 'invoice_logs'];
+    let channel = supabase.channel(`dashboard-activity-${ownerId}`);
+    tables.forEach((table) => {
+      channel = channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table, filter: `owner_id=eq.${ownerId}` },
+        () => load()
+      );
+    });
+    channel.subscribe();
+
     return () => {
       cancelled = true;
+      supabase.removeChannel(channel);
     };
   }, [authLoading, profile]);
 
