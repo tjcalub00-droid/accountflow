@@ -67,6 +67,7 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
   const { profile, signOut, isOwner } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const [overviewOpen, setOverviewOpen] = useState(false);
+  const [overviewHover, setOverviewHover] = useState(false);
   const isMobileSidebar = typeof onMouseEnter === 'undefined';
 
   const handleSignOut = async () => {
@@ -122,22 +123,29 @@ export default function Sidebar({ collapsed, onToggle, onMouseEnter, onMouseLeav
       <nav className="flex-1 overflow-y-auto scrollbar-thin py-3 px-2">
         {navGroups.map((group) => {
           const isOverview = group.label === 'Overview';
-          const groupCollapsible = isMobileSidebar && isOverview;
-          const groupVisible = !groupCollapsible || overviewOpen;
+          const groupCollapsible = isOverview && !collapsed;
+          const groupVisible = !groupCollapsible || overviewOpen || overviewHover;
           return (
-          <div key={`group-${group.label}`} className="mb-4">
+          <div
+            key={`group-${group.label}`}
+            className="mb-4"
+            onMouseEnter={groupCollapsible ? () => setOverviewHover(true) : undefined}
+            onMouseLeave={groupCollapsible ? () => setOverviewHover(false) : undefined}
+          >
             {!collapsed && (
               groupCollapsible ? (
                 <button
                   type="button"
                   onClick={() => setOverviewOpen((v) => !v)}
-                  aria-expanded={overviewOpen}
+                  onFocus={() => setOverviewHover(true)}
+                  onBlur={() => setOverviewHover(false)}
+                  aria-expanded={overviewOpen || overviewHover}
                   className="w-full flex items-center justify-between text-xs font-600 uppercase tracking-widest text-muted-foreground px-2 mb-1 py-1 rounded hover:bg-muted"
                 >
                   <span>{group.label}</span>
                   <ChevronRight
                     size={14}
-                    className={`transition-transform duration-200 ${overviewOpen ? 'rotate-90' : ''}`}
+                    className={`transition-transform duration-200 ${overviewOpen || overviewHover ? 'rotate-90' : ''}`}
                   />
                 </button>
               ) : (
