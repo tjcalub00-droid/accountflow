@@ -34,13 +34,13 @@ export default function DashboardChartsRow() {
         </div>
         <RevenueVsExpensesChart />
       </div>
-      <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+      <div className="border border-border rounded-xl p-5 shadow-sm bg-[rgba(241,208,208,1)]">
         <div className="mb-4">
           <h3 className="text-base font-semibold text-foreground">Expense Breakdown</h3>
           <p className="text-xs text-muted-foreground mt-0.5">Sep 2026</p>
         </div>
         <ExpenseCategoryChart />
       </div>
-    </div>
-  );
+    </div>);
+
 }
