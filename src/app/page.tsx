@@ -8,12 +8,14 @@ import DashboardActivityFeed from './components/DashboardActivityFeed';
 import PageActions from '@/components/ui/PageActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { ChevronDown } from 'lucide-react';
 
 export default function DashboardPage() {
   const { profile, loading: authLoading, getEffectiveOwnerId } = useAuth();
   const [companyName, setCompanyName] = useState('');
   const [lastUpdated, setLastUpdated] = useState('');
   const [fiscalYear, setFiscalYear] = useState('');
+  const [overviewOpen, setOverviewOpen] = useState(false);
 
   useEffect(() => {
     if (authLoading || !profile) return;
@@ -43,17 +45,28 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6 fade-in">
+      <div className="space-y-4 sm:space-y-6 fade-in">
         {/* Page header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Financial Overview</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <button
+              type="button"
+              onClick={() => setOverviewOpen((v) => !v)}
+              aria-expanded={overviewOpen}
+              className="sm:pointer-events-none flex items-center gap-1.5 text-left"
+            >
+              <h1 className="text-lg sm:text-2xl font-bold text-foreground">Financial Overview</h1>
+              <ChevronDown
+                size={16}
+                className={`sm:hidden text-muted-foreground transition-transform duration-200 ${overviewOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+            <p className={`text-sm text-muted-foreground mt-0.5 ${overviewOpen ? 'block' : 'hidden'} sm:block`}>
               {displayName}
               {fiscalYear ? ` · Fiscal Year ${fiscalYear}` : ''}
             </p>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className={`${overviewOpen ? 'flex' : 'hidden'} sm:flex items-center gap-3 flex-wrap`}>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">Last updated:</span>
               <span className="text-xs font-mono font-medium text-foreground">{lastUpdated}</span>
