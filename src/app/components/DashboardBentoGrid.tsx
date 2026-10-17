@@ -1,16 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  TrendingUp,
-  TrendingDown,
-  ArrowUpRight,
-  ArrowDownRight,
-  DollarSign,
-  FileX,
-  AlertCircle,
-  CreditCard,
-} from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, FileX, AlertCircle, CreditCard,  } from 'lucide-react';
 
 export default function DashboardBentoGrid() {
   const [currentDate, setCurrentDate] = useState('');
@@ -27,38 +18,6 @@ export default function DashboardBentoGrid() {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4 gap-4">
-      {/* Hero card */}
-      <div className="col-span-1 sm:col-span-2 bg-card border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
-              Net Cash Position
-            </p>
-            <p className="text-4xl font-bold font-mono text-foreground">₱0</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center">
-            <DollarSign size={20} className="text-success" />
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1 text-sm font-semibold text-muted-foreground">
-            <ArrowUpRight size={14} />
-            0.0%
-          </span>
-          <span className="text-xs text-muted-foreground">vs last month</span>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <div className="bg-muted rounded-lg p-3">
-            <p className="text-xs text-muted-foreground">Cash In (MTD)</p>
-            <p className="text-base font-bold font-mono text-foreground mt-0.5">₱0</p>
-          </div>
-          <div className="bg-muted rounded-lg p-3">
-            <p className="text-xs text-muted-foreground">Cash Out (MTD)</p>
-            <p className="text-base font-bold font-mono text-foreground mt-0.5">₱0</p>
-          </div>
-        </div>
-      </div>
-
       {/* AR */}
       <div className="col-span-1 bg-card border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-start justify-between mb-3">
